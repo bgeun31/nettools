@@ -4,7 +4,6 @@ import { useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { ToolsGrid } from "@/components/tools-grid"
-import { StatusBar } from "@/components/status-bar"
 import { ToolInterface } from "@/components/tool-interface"
 import { LoginForm } from "@/components/login-form"
 
@@ -60,12 +59,12 @@ export default function NetToolsPage() {
           <div className="max-w-7xl mx-auto space-y-6">
             {activeMenu === "dashboard" ? (
               <>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-start">
                   <div>
                     <h1 className="text-3xl font-bold text-foreground">NetTools Dashboard</h1>
                     <p className="text-muted-foreground mt-1">네트워크 관리 및 모니터링 도구 모음</p>
                   </div>
-                  <StatusBar />
+                  
                 </div>
                 <ToolsGrid onToolSelect={handleToolSelect} />
               </>
