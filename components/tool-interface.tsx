@@ -17,15 +17,42 @@ interface ToolInterfaceProps {
 
 export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   const [isRunning, setIsRunning] = useState(false)
-  const [results, setResults] = useState<string | null>(null)
+  const [results, setResults] = useState<string | null>(null) // 상태/에러/다운로드 URL 저장
+  const [files, setFiles] = useState<FileList | null>(null)
+  const [tableJson, setTableJson] = useState<any[] | null>(null) // JSON 미리보기용
+  const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000"
 
-  const handleRun = async () => {
+  const runExtract = async (mode: "json" | "excel") => {
+    if (!files || files.length === 0) {
+      setResults("파일을 선택해주세요.")
+      return
+    }
     setIsRunning(true)
-    // Simulate processing
-    setTimeout(() => {
+    setResults(null)
+    setTableJson(null)
+
+    try {
+      const form = new FormData()
+      Array.from(files).forEach((f) => form.append("files", f))
+
+      if (mode === "json") {
+        const res = await fetch(`${API_BASE}/extract/json`, { method: "POST", body: form })
+        if (!res.ok) throw new Error("JSON 추출 실패")
+        const data = await res.json()
+        setTableJson(data)
+        setResults("JSON 미리보기 로드 완료")
+      } else {
+        const res = await fetch(`${API_BASE}/extract/excel`, { method: "POST", body: form })
+        if (!res.ok) throw new Error("엑셀 추출 실패")
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        setResults(url) // blob URL을 결과로 저장 (다운로드 링크)
+      }
+    } catch (e: any) {
+      setResults(`에러: ${e.message}`)
+    } finally {
       setIsRunning(false)
-      setResults("작업이 성공적으로 완료되었습니다.")
-    }, 3000)
+    }
   }
 
   const renderToolInterface = () => {
@@ -35,7 +62,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
           <div className="space-y-4">
             <div>
               <Label htmlFor="directory">디렉토리 경로</Label>
-              <Input id="directory" placeholder="C:\logs" />
+              <Input id="directory" placeholder="C:\\logs" />
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox id="ini" />
@@ -117,7 +144,13 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             <div>
               <Label htmlFor="log-files">로그 파일들 선택</Label>
               <div className="flex items-center gap-2">
-                <Input id="log-files" type="file" multiple accept=".log,.txt" />
+                <Input
+                  id="log-files"
+                  type="file"
+                  multiple
+                  accept=".log,.txt"
+                  onChange={(e) => setFiles(e.target.files)}
+                />
                 <Button variant="outline" size="icon">
                   <Upload className="w-4 h-4" />
                 </Button>
@@ -274,13 +307,13 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
               {renderToolInterface()}
 
               <div className="flex gap-2 pt-6">
-                <Button onClick={handleRun} disabled={isRunning} className="flex-1">
+                <Button onClick={() => runExtract("json")} disabled={isRunning} className="flex-1">
                   <Play className="w-4 h-4 mr-2" />
-                  {isRunning ? "실행 중..." : "실행"}
+                  {isRunning ? "실행 중..." : "미리보기(표)"}
                 </Button>
-                <Button variant="outline">
+                <Button variant="outline" onClick={() => runExtract("excel")} disabled={isRunning}>
                   <FileText className="w-4 h-4 mr-2" />
-                  미리보기
+                  엑셀 다운로드
                 </Button>
               </div>
             </CardContent>
@@ -299,19 +332,57 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
                   <p className="text-muted-foreground">처리 중...</p>
                 </div>
-              ) : results ? (
-                <div className="space-y-4">
-                  <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                    <p className="text-green-800">{results}</p>
+              ) : tableJson ? (
+                <div className="space-y-3">
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-green-800">JSON 미리보기 로드 완료</p>
                   </div>
-                  <Button variant="outline" className="w-full bg-transparent">
+                  <div className="overflow-auto max-h-[420px] border rounded-md">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-card">
+                        <tr>
+                          {Object.keys(tableJson[0] || {}).map((k) => (
+                            <th key={k} className="text-left p-2 border-b">
+                              {k}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {tableJson.map((row, idx) => (
+                          <tr key={idx} className="odd:bg-muted/40">
+                            {Object.keys(tableJson[0] || {}).map((k) => (
+                              <td key={k} className="p-2 border-b">
+                                {String(row[k] ?? "")}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              ) : typeof results === "string" && results.startsWith("blob:") ? (
+                <div className="space-y-4">
+                  <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                    <p className="text-green-800">엑셀 파일이 준비되었습니다.</p>
+                  </div>
+                  <a
+                    href={results}
+                    download="hostname-serial.xlsx"
+                    className="inline-flex items-center justify-center w-full border rounded-md py-2"
+                  >
                     <Download className="w-4 h-4 mr-2" />
                     결과 다운로드
-                  </Button>
+                  </a>
+                </div>
+              ) : results ? (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <p className="text-red-800">{results}</p>
                 </div>
               ) : (
                 <div className="text-center py-8">
-                  <p className="text-muted-foreground">실행 버튼을 클릭하여 도구를 실행하세요.</p>
+                  <p className="text-muted-foreground">파일을 올린 뒤 실행하세요.</p>
                 </div>
               )}
             </CardContent>
