@@ -17,10 +17,14 @@ interface ToolInterfaceProps {
 
 export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   const [isRunning, setIsRunning] = useState(false)
-  // selection for model/serial/hostname
+  // selection for ip/model/serial/hostname/image fields
+  const [includeIp, setIncludeIp] = useState(true)
   const [includeModel, setIncludeModel] = useState(true)
   const [includeSerial, setIncludeSerial] = useState(true)
   const [includeHostname, setIncludeHostname] = useState(true)
+  const [includeImage, setIncludeImage] = useState(true)
+  const [includeImageSelected, setIncludeImageSelected] = useState(true)
+  const [includeImageBooted, setIncludeImageBooted] = useState(true)
   const [results, setResults] = useState<string | null>(null) // 상태/에러/다운로드 URL 저장
   const [files, setFiles] = useState<FileList | null>(null)
   const [tableJson, setTableJson] = useState<any[] | null>(null) // JSON 미리보기용
@@ -39,9 +43,13 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
       const form = new FormData()
       Array.from(files).forEach((f) => form.append("files", f))
       // pass selection to backend
+      form.append("include_ip", String(includeIp))
       form.append("include_model", String(includeModel))
       form.append("include_serial", String(includeSerial))
       form.append("include_hostname", String(includeHostname))
+      form.append("include_image", String(includeImage))
+      form.append("include_image_selected", String(includeImageSelected))
+      form.append("include_image_booted", String(includeImageBooted))
 
       if (mode === "json") {
         const res = await fetch(`${API_BASE}/extract/json`, { method: "POST", body: form })
@@ -72,6 +80,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
               <Label htmlFor="directory">디렉토리 경로</Label>
               <Input id="directory" placeholder="C:\\logs" />
             </div>
+            
             <div className="flex items-center space-x-2">
               <Checkbox id="ini" />
               <Label htmlFor="ini">.ini 파일</Label>
@@ -163,18 +172,6 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   <Upload className="w-4 h-4" />
                 </Button>
               </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="model" defaultChecked onCheckedChange={(v) => setIncludeModel(!!v)} />
-              <Label htmlFor="model">모델명 추출</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="serial" defaultChecked onCheckedChange={(v) => setIncludeSerial(!!v)} />
-              <Label htmlFor="serial">시리얼 번호 추출</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="hostname" defaultChecked onCheckedChange={(v) => setIncludeHostname(!!v)} />
-              <Label htmlFor="hostname">호스트네임 추출</Label>
             </div>
           </div>
         )
@@ -313,6 +310,47 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             </CardHeader>
             <CardContent>
               {renderToolInterface()}
+
+              {toolId === "tool-3" && (
+                <div className="space-y-2 mt-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="model" checked={includeModel} onCheckedChange={(v) => setIncludeModel(!!v)} />
+                    <Label htmlFor="model">모델명</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="serial" checked={includeSerial} onCheckedChange={(v) => setIncludeSerial(!!v)} />
+                    <Label htmlFor="serial">시리얼 번호</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="hostname" checked={includeHostname} onCheckedChange={(v) => setIncludeHostname(!!v)} />
+                    <Label htmlFor="hostname">호스트네임</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="ip" checked={includeIp} onCheckedChange={(v) => setIncludeIp(!!v)} />
+                    <Label htmlFor="ip">IP</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox id="image" checked={includeImage} onCheckedChange={(v) => setIncludeImage(!!v)} />
+                    <Label htmlFor="image">Image 버전</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="image-selected"
+                      checked={includeImageSelected}
+                      onCheckedChange={(v) => setIncludeImageSelected(!!v)}
+                    />
+                    <Label htmlFor="image-selected">Image Selected</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="image-booted"
+                      checked={includeImageBooted}
+                      onCheckedChange={(v) => setIncludeImageBooted(!!v)}
+                    />
+                    <Label htmlFor="image-booted">Image Booted</Label>
+                  </div>
+                </div>
+              )}
 
               <div className="flex gap-2 pt-6">
                 <Button onClick={() => runExtract("json")} disabled={isRunning} className="flex-1">
