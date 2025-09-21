@@ -29,7 +29,7 @@ const tools = [
   {
     icon: Server,
     title: "모델/시리얼/호스트네임 추출",
-    description: "네트워크 장비 로그에서 모델명, 시리얼번호, 호스트네임 등을 추출하여 엑셀로 정리합니다.",
+    description: "로그에서 모델명, 시리얼번호, 호스트네임 등을 추출하여 엑셀로 정리합니다.",
     status: "ready",
     lastRun: "2시간 전",
     color: "bg-purple-500",
@@ -37,7 +37,7 @@ const tools = [
   {
     icon: Merge,
     title: "로그 파일 병합",
-    description: "여러 개의 스위치 로그 파일을 하나의 엑셀 파일로 병합하여 통합 관리합니다.",
+    description: "여러 개의 로그 파일을 하나의 엑셀 파일로 병합합니다.",
     status: "ready",
     lastRun: "1시간 전",
     color: "bg-orange-500",
@@ -45,7 +45,7 @@ const tools = [
   {
     icon: Split,
     title: "로그 파일 분산",
-    description: "엑셀 파일을 단말/포트별 개별 텍스트 파일로 분산하여 배포합니다.",
+    description: "여러 시트의 엑셀 파일을 개별 텍스트 파일로 분산합니다.",
     status: "ready",
     lastRun: "3시간 전",
     color: "bg-cyan-500",
