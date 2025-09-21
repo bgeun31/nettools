@@ -1,5 +1,5 @@
 # backend/extract_model_serial_hostname.py
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Form
 import pandas as pd
 import io
 from fastapi.responses import StreamingResponse
@@ -27,7 +27,12 @@ def extract_by_patterns(pattern_list, text: str):
     return "없음"
 
 @router.post("/extract/json")
-async def extract_json(files: list[UploadFile] = File(...)):
+async def extract_json(
+    files: list[UploadFile] = File(...),
+    include_model: bool = Form(True),
+    include_serial: bool = Form(True),
+    include_hostname: bool = Form(True),
+):
     results = []
     for f in files:
         content = (await f.read()).decode("utf-8", errors="ignore")
@@ -37,16 +42,31 @@ async def extract_json(files: list[UploadFile] = File(...)):
         model = extract_by_patterns(patterns["model"], content)
         filename = extract_by_patterns(patterns["filename"], f.filename)
 
-        results.append({
-            "hostname": sysname,
+        row = {
             "ip": filename,
+            "hostname": sysname,
             "serial": serial,
-            "model": model
-        })
+            "model": model,
+        }
+
+        # 선택된 항목만 반환 (ip는 항상 포함)
+        filtered = {"ip": row["ip"]}
+        if include_hostname:
+            filtered["hostname"] = row["hostname"]
+        if include_serial:
+            filtered["serial"] = row["serial"]
+        if include_model:
+            filtered["model"] = row["model"]
+        results.append(filtered)
     return results
 
 @router.post("/extract/excel")
-async def extract_excel(files: list[UploadFile] = File(...)):
+async def extract_excel(
+    files: list[UploadFile] = File(...),
+    include_model: bool = Form(True),
+    include_serial: bool = Form(True),
+    include_hostname: bool = Form(True),
+):
     rows = []
     for f in files:
         content = (await f.read()).decode("utf-8", errors="ignore")
@@ -54,9 +74,19 @@ async def extract_excel(files: list[UploadFile] = File(...)):
         serial = extract_by_patterns(patterns["serial"], content)
         model = extract_by_patterns(patterns["model"], content)
         filename = extract_by_patterns(patterns["filename"], f.filename)
-        rows.append({"hostname": sysname, "ip": filename, "serial": serial, "model": model})
+        rows.append({"ip": filename, "hostname": sysname, "serial": serial, "model": model})
 
     df = pd.DataFrame(rows)
+    # 열 선택: ip는 항상 포함, 나머지는 체크박스에 따라 필터링
+    columns = ["ip"]
+    if include_hostname:
+        columns.append("hostname")
+    if include_serial:
+        columns.append("serial")
+    if include_model:
+        columns.append("model")
+
+    df = df[columns]
     stream = io.BytesIO()
     with pd.ExcelWriter(stream, engine="openpyxl") as writer:
         df.to_excel(writer, index=False, sheet_name="extracted")

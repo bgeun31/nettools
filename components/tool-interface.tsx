@@ -17,6 +17,10 @@ interface ToolInterfaceProps {
 
 export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   const [isRunning, setIsRunning] = useState(false)
+  // selection for model/serial/hostname
+  const [includeModel, setIncludeModel] = useState(true)
+  const [includeSerial, setIncludeSerial] = useState(true)
+  const [includeHostname, setIncludeHostname] = useState(true)
   const [results, setResults] = useState<string | null>(null) // 상태/에러/다운로드 URL 저장
   const [files, setFiles] = useState<FileList | null>(null)
   const [tableJson, setTableJson] = useState<any[] | null>(null) // JSON 미리보기용
@@ -34,6 +38,10 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
     try {
       const form = new FormData()
       Array.from(files).forEach((f) => form.append("files", f))
+      // pass selection to backend
+      form.append("include_model", String(includeModel))
+      form.append("include_serial", String(includeSerial))
+      form.append("include_hostname", String(includeHostname))
 
       if (mode === "json") {
         const res = await fetch(`${API_BASE}/extract/json`, { method: "POST", body: form })
@@ -157,15 +165,15 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
               </div>
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox id="model" defaultChecked />
+              <Checkbox id="model" defaultChecked onCheckedChange={(v) => setIncludeModel(!!v)} />
               <Label htmlFor="model">모델명 추출</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox id="serial" defaultChecked />
+              <Checkbox id="serial" defaultChecked onCheckedChange={(v) => setIncludeSerial(!!v)} />
               <Label htmlFor="serial">시리얼 번호 추출</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox id="hostname" defaultChecked />
+              <Checkbox id="hostname" defaultChecked onCheckedChange={(v) => setIncludeHostname(!!v)} />
               <Label htmlFor="hostname">호스트네임 추출</Label>
             </div>
           </div>
