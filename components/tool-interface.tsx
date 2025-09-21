@@ -312,7 +312,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
               {renderToolInterface()}
 
               {toolId === "tool-3" && (
-                <div className="space-y-2 mt-2">
+                <div className="space-y-3 mt-3">
                   <div className="flex items-center space-x-2">
                     <Checkbox id="model" checked={includeModel} onCheckedChange={(v) => setIncludeModel(!!v)} />
                     <Label htmlFor="model">모델명</Label>
