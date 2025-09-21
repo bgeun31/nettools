@@ -43,6 +43,9 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   // merge files (tool-3)
   const [mergeFiles, setMergeFiles] = useState<FileList | null>(null)
   const [mergeOutputName, setMergeOutputName] = useState("merged_logs.xlsx")
+  // distribute files (tool-4)
+  const [distExcel, setDistExcel] = useState<File | null>(null)
+  const [distFormat, setDistFormat] = useState<"txt" | "log">("txt")
   // results
   const [results, setResults] = useState<string | null>(null)
   const [files, setFiles] = useState<FileList | null>(null)
@@ -182,6 +185,40 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
           form.append("output_name", mergeOutputName || "merged_logs.xlsx")
           const res = await fetch(`${API_BASE}/merge/excel`, { method: "POST", body: form })
           if (!res.ok) throw new Error("엑셀 생성 실패")
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          setResults(url)
+        }
+      } catch (e: any) {
+        setResults(`에러: ${e.message}`)
+      } finally {
+        setIsRunning(false)
+      }
+      return
+    }
+
+    // Distribute logs from Excel
+    if (toolId === "tool-4") {
+      if (!distExcel) {
+        setResults("엑셀 파일을 업로드해주세요.")
+        return
+      }
+      setIsRunning(true)
+      setResults(null)
+      setTableJson(null)
+      try {
+        const form = new FormData()
+        form.append("excel", distExcel)
+        if (mode === "json") {
+          const res = await fetch(`${API_BASE}/distribute/preview`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("미리보기 생성 실패")
+          const data = await res.json()
+          setTableJson(data)
+          setResults("미리보기 로드 완료")
+        } else {
+          form.append("format", distFormat)
+          const res = await fetch(`${API_BASE}/distribute/zip`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("ZIP 생성 실패")
           const blob = await res.blob()
           const url = URL.createObjectURL(blob)
           setResults(url)
@@ -359,7 +396,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             <div>
               <Label htmlFor="excel-file">엑셀 파일 업로드</Label>
               <div className="flex items-center gap-2">
-                <Input id="excel-file" type="file" accept=".xlsx,.xls" />
+                <Input id="excel-file" type="file" accept=".xlsx,.xls" onChange={(e) => setDistExcel(e.target.files?.[0] ?? null)} />
                 <Button variant="outline" size="icon">
                   <Upload className="w-4 h-4" />
                 </Button>
@@ -367,7 +404,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             </div>
             <div>
               <Label htmlFor="output-format">출력 형식</Label>
-              <Select>
+              <Select value={distFormat} onValueChange={(v) => setDistFormat((v as any) === "log" ? "log" : "txt") }>
                 <SelectTrigger>
                   <SelectValue placeholder="텍스트 파일" />
                 </SelectTrigger>
@@ -508,7 +545,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                 </Button>
                 <Button variant="outline" onClick={() => runExtract("excel")} disabled={isRunning}>
                   <FileText className="w-4 h-4 mr-2" />
-                  {toolId === "tool-1" ? "ZIP 다운로드" : "엑셀 다운로드"}
+                  {toolId === "tool-1" || toolId === "tool-4" ? "ZIP 다운로드" : "엑셀 다운로드"}
                 </Button>
               </div>
             </CardContent>
@@ -564,7 +601,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   </div>
                   <a
                     href={results}
-                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : "hostname-serial.xlsx"}
+                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : toolId === "tool-4" ? "distributed-logs.zip" : "hostname-serial.xlsx"}
                     className="inline-flex items-center justify-center w-full border rounded-md py-2"
                   >
                     <Download className="w-4 h-4 mr-2" />
