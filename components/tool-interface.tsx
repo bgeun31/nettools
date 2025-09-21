@@ -262,17 +262,18 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
               <TabsContent value="hostname">
                 <div className="space-y-4">
                   <div>
-                    <Label htmlFor="hostname-file">호스트명 파일 업로드</Label>
+                    <Label htmlFor="hostname-template">템플릿 INI</Label>
                     <div className="flex items-center gap-2">
-                      <Input id="hostname-file" type="file" multiple accept=".ini,.txt" onChange={(e) => {
-                        const files = Array.from(e.target.files ?? [])
-                        const ini = files.find(f => f.name.toLowerCase().endsWith('.ini')) || null
-                        const txt = files.find(f => f.name.toLowerCase().endsWith('.txt')) || null
-                        // @ts-ignore
-                        setCrtTemplate(ini as any)
-                        // @ts-ignore
-                        setCrtHostList(txt as any)
-                      }} />
+                      <Input id="hostname-template" type="file" accept=".ini" onChange={(e) => setCrtTemplate(e.target.files?.[0] ?? null)} />
+                      <Button variant="outline" size="icon">
+                        <Upload className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="hostname-list">Hostname 목록 TXT</Label>
+                    <div className="flex items-center gap-2">
+                      <Input id="hostname-list" type="file" accept=".txt" onChange={(e) => setCrtHostList(e.target.files?.[0] ?? null)} />
                       <Button variant="outline" size="icon">
                         <Upload className="w-4 h-4" />
                       </Button>
