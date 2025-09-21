@@ -52,19 +52,11 @@ const tools = [
   },
   {
     icon: Network,
-    title: "LLDP 포트라벨 추출 (Hostname)",
-    description: "LLDP 정보에서 호스트네임 기반으로 포트 연결 정보를 추출하여 라벨을 생성합니다.",
+    title: "LLDP 포트 라벨",
+    description: "Hostname/OUI 두 가지 탭으로 LLDP 포트 라벨을 생성합니다.",
     status: "ready",
     lastRun: "30분 전",
     color: "bg-indigo-500",
-  },
-  {
-    icon: Database,
-    title: "LLDP 포트라벨 추출 (OUI)",
-    description: "MAC 주소의 OUI 정보를 기반으로 LLDP 포트 연결 정보를 추출합니다.",
-    status: "ready",
-    lastRun: "1시간 전",
-    color: "bg-teal-500",
   },
 ]
 
@@ -133,4 +125,3 @@ export function ToolsGrid({ onToolSelect }: ToolsGridProps) {
     </div>
   )
 }
-
