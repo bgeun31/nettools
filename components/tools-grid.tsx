@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Network, Terminal, FolderOpen, Database, Server, Play, Settings, Clock, Merge, Split } from "lucide-react"
+import { Network, Terminal, FolderOpen, Server, Play, Settings, Merge, Split } from "lucide-react"
 
 interface ToolsGridProps {
   onToolSelect: (toolId: string) => void
@@ -13,66 +13,44 @@ const tools = [
   {
     icon: FolderOpen,
     title: "디렉토리 Listing",
-    description: "지정된 폴더에서 .ini, .log, .txt 파일들의 이름을 추출하여 목록을 생성합니다.",
+    description: "지정된 폴더를 ZIP으로 올려 내부 .ini/.log/.txt 목록을 생성합니다.",
     status: "ready",
-    lastRun: "30분 전",
     color: "bg-blue-500",
   },
   {
     icon: Terminal,
-    title: "SecureCRT 세션 생성 (IP Range)",
-    description: "IP 범위와 라벨 파일을 기반으로 SecureCRT .ini 세션 파일들을 자동 생성합니다.",
+    title: "SecureCRT 세션 생성",
+    description: "IP 범위 또는 Hostname 목록으로 SecureCRT .ini 세션 파일을 생성합니다.",
     status: "ready",
-    lastRun: "1시간 전",
-    color: "bg-green-500",
-  },
-  {
-    icon: Terminal,
-    title: "SecureCRT 세션 생성 (Hostname)",
-    description: "텍스트 파일의 호스트네임과 IP 정보를 기반으로 SecureCRT 세션 파일들을 생성합니다.",
-    status: "ready",
-    lastRun: "45분 전",
     color: "bg-emerald-500",
   },
   {
     icon: Server,
     title: "모델/시리얼/호스트네임 추출",
-    description: "네트워크 장비 로그에서 모델명, 시리얼 번호, 호스트네임 등을 추출하여 엑셀로 저장합니다.",
+    description: "네트워크 장비 로그에서 모델명, 시리얼번호, 호스트네임 등을 추출합니다.",
     status: "ready",
-    lastRun: "2시간 전",
     color: "bg-purple-500",
   },
   {
     icon: Merge,
-    title: "로그파일 병합",
-    description: "여러 개의 텍스트/로그 파일들을 하나의 엑셀 파일로 병합하여 통합 관리합니다.",
+    title: "로그 파일 병합",
+    description: "여러 로그 파일을 하나의 엑셀 파일로 병합합니다.",
     status: "ready",
-    lastRun: "1시간 전",
     color: "bg-orange-500",
   },
   {
     icon: Split,
-    title: "로그파일 분산",
-    description: "엑셀 파일의 각 시트를 개별 텍스트 파일로 분산하여 저장합니다.",
+    title: "로그 파일 분산",
+    description: "엑셀 파일을 시트별 텍스트 파일(.txt/.log)로 분산합니다.",
     status: "ready",
-    lastRun: "3시간 전",
     color: "bg-cyan-500",
   },
   {
     icon: Network,
-    title: "LLDP 포트라벨 추출 (Hostname)",
-    description: "LLDP 정보에서 호스트네임 기반으로 포트 연결 정보를 추출하여 라벨을 생성합니다.",
+    title: "LLDP 포트 라벨",
+    description: "Hostname/OUI 기반의 LLDP 포트 라벨을 생성합니다.",
     status: "ready",
-    lastRun: "30분 전",
     color: "bg-indigo-500",
-  },
-  {
-    icon: Database,
-    title: "LLDP 포트라벨 추출 (OUI)",
-    description: "MAC 주소의 OUI 정보를 기반으로 LLDP 포트 연결 정보를 추출합니다.",
-    status: "ready",
-    lastRun: "1시간 전",
-    color: "bg-teal-500",
   },
 ]
 
@@ -85,7 +63,7 @@ const getStatusBadge = (status: string) => {
     case "ready":
       return <Badge variant="outline">준비됨</Badge>
     default:
-      return <Badge variant="outline">대기</Badge>
+      return <Badge variant="outline">알수없음</Badge>
   }
 }
 
@@ -119,16 +97,6 @@ export function ToolsGrid({ onToolSelect }: ToolsGridProps) {
           <CardContent className="space-y-4">
             <CardDescription className="text-sm leading-relaxed">{tool.description}</CardDescription>
 
-            <div className="space-y-3">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  마지막 실행
-                </span>
-                <span className="font-medium">{tool.lastRun}</span>
-              </div>
-            </div>
-
             <div className="flex gap-2 pt-2">
               <Button className="flex-1" size="sm" onClick={() => onToolSelect(tool.id)}>
                 <Play className="w-4 h-4 mr-2" />
@@ -141,3 +109,4 @@ export function ToolsGrid({ onToolSelect }: ToolsGridProps) {
     </div>
   )
 }
+
