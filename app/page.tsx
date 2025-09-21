@@ -62,7 +62,7 @@ export default function NetToolsPage() {
                 <div className="flex items-center justify-start">
                   <div>
                     <h1 className="text-3xl font-bold text-foreground">NetTools Dashboard</h1>
-                    <p className="text-muted-foreground mt-1">네트워크 관리 및 모니터링 도구 모음</p>
+                    <p className="text-muted-foreground mt-1">네트워크 관리 도구 모음</p>
                   </div>
                   
                 </div>

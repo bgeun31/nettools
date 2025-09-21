@@ -160,3 +160,5 @@ async def extract_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=extract.xlsx"},
     )
+
+# moved Directory Listing and SecureCRT endpoints to dedicated modules

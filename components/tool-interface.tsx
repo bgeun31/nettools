@@ -25,12 +25,89 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   const [includeImage, setIncludeImage] = useState(true)
   const [includeImageSelected, setIncludeImageSelected] = useState(true)
   const [includeImageBooted, setIncludeImageBooted] = useState(true)
+  // directory listing states (tool-0)
+  const [directoryPath, setDirectoryPath] = useState("")
+  const [dirIncludeIni, setDirIncludeIni] = useState(false)
+  const [dirIncludeLog, setDirIncludeLog] = useState(true)
+  const [dirIncludeTxt, setDirIncludeTxt] = useState(true)
+  // securecrt (tool-2)
+  const [crtTemplate, setCrtTemplate] = useState<File | null>(null)
+  const [crtHostList, setCrtHostList] = useState<File | null>(null)
   const [results, setResults] = useState<string | null>(null) // 상태/에러/다운로드 URL 저장
   const [files, setFiles] = useState<FileList | null>(null)
   const [tableJson, setTableJson] = useState<any[] | null>(null) // JSON 미리보기용
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000"
 
   const runExtract = async (mode: "json" | "excel") => {
+    // Directory Listing branch
+    if (toolId === "tool-0") {
+      if (!directoryPath) {
+        setResults("디렉터리 경로를 입력해주세요.")
+        return
+      }
+      setIsRunning(true)
+      setResults(null)
+      setTableJson(null)
+      try {
+        const form = new FormData()
+        form.append("directory", directoryPath)
+        form.append("include_ini", String(dirIncludeIni))
+        form.append("include_log", String(dirIncludeLog))
+        form.append("include_txt", String(dirIncludeTxt))
+        if (mode === "json") {
+          const res = await fetch(`${API_BASE}/dir/list`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("디렉터리 목록 조회 실패")
+          const data = await res.json()
+          setTableJson(data)
+          setResults("목록 로드 완료")
+        } else {
+          const res = await fetch(`${API_BASE}/dir/list/excel`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("디렉터리 목록 엑셀 생성 실패")
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          setResults(url)
+        }
+      } catch (e: any) {
+        setResults(`에러: ${e.message}`)
+      } finally {
+        setIsRunning(false)
+      }
+      return
+    }
+
+    // SecureCRT session generation (hostname list)
+    if (toolId === "tool-2") {
+      if (!crtTemplate || !crtHostList) {
+        setResults("템플릿 INI와 Hostname TXT를 모두 선택해주세요.")
+        return
+      }
+      setIsRunning(true)
+      setResults(null)
+      setTableJson(null)
+      try {
+        const form = new FormData()
+        form.append("template", crtTemplate)
+        form.append("hostlist", crtHostList)
+        if (mode === "json") {
+          const res = await fetch(`${API_BASE}/securecrt/hostname/preview`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("미리보기 생성 실패")
+          const data = await res.json()
+          setTableJson(data)
+          setResults("미리보기 로드 완료")
+        } else {
+          const res = await fetch(`${API_BASE}/securecrt/hostname/generate`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("ZIP 생성 실패")
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          setResults(url)
+        }
+      } catch (e: any) {
+        setResults(`에러: ${e.message}`)
+      } finally {
+        setIsRunning(false)
+      }
+      return
+    }
     if (!files || files.length === 0) {
       setResults("파일을 선택해주세요.")
       return
@@ -78,19 +155,19 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
           <div className="space-y-4">
             <div>
               <Label htmlFor="directory">디렉토리 경로</Label>
-              <Input id="directory" placeholder="C:\\logs" />
+              <Input id="directory" placeholder="C:\\logs" value={directoryPath} onChange={(e) => setDirectoryPath(e.target.value)} />
             </div>
             
             <div className="flex items-center space-x-2">
-              <Checkbox id="ini" />
+              <Checkbox id="ini" checked={dirIncludeIni} onCheckedChange={(v) => setDirIncludeIni(!!v)} />
               <Label htmlFor="ini">.ini 파일</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox id="log" defaultChecked />
+              <Checkbox id="log" checked={dirIncludeLog} onCheckedChange={(v) => setDirIncludeLog(!!v)} />
               <Label htmlFor="log">.log 파일</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox id="txt" defaultChecked />
+              <Checkbox id="txt" checked={dirIncludeTxt} onCheckedChange={(v) => setDirIncludeTxt(!!v)} />
               <Label htmlFor="txt">.txt 파일</Label>
             </div>
           </div>
@@ -138,7 +215,15 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             <div>
               <Label htmlFor="hostname-file">호스트네임 파일 업로드</Label>
               <div className="flex items-center gap-2">
-                <Input id="hostname-file" type="file" accept=".txt" />
+                <Input id="hostname-file" type="file" multiple accept=".ini,.txt" onChange={(e) => {
+                  const files = Array.from(e.target.files ?? [])
+                  const ini = files.find(f => f.name.toLowerCase().endsWith('.ini')) || null
+                  const txt = files.find(f => f.name.toLowerCase().endsWith('.txt')) || null
+                  // @ts-ignore
+                  setCrtTemplate(ini as any)
+                  // @ts-ignore
+                  setCrtHostList(txt as any)
+                }} />
                 <Button variant="outline" size="icon">
                   <Upload className="w-4 h-4" />
                 </Button>
@@ -359,7 +444,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                 </Button>
                 <Button variant="outline" onClick={() => runExtract("excel")} disabled={isRunning}>
                   <FileText className="w-4 h-4 mr-2" />
-                  엑셀 다운로드
+                  {toolId === "tool-2" ? "ZIP 다운로드" : toolId === "tool-0" ? "엑셀 다운로드" : "엑셀 다운로드"}
                 </Button>
               </div>
             </CardContent>
@@ -415,7 +500,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   </div>
                   <a
                     href={results}
-                    download="hostname-serial.xlsx"
+                    download={toolId === "tool-2" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : "hostname-serial.xlsx"}
                     className="inline-flex items-center justify-center w-full border rounded-md py-2"
                   >
                     <Download className="w-4 h-4 mr-2" />

@@ -2,6 +2,8 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from .extract_model_serial_hostname import router as extract_router  # ← 점 하나
+from .directory_listing import router as dir_router
+from .securecrt_hostname import router as securecrt_router
 
 app = FastAPI(title="NetTools API")
 
@@ -14,7 +16,10 @@ app.add_middleware(
 )
 
 app.include_router(extract_router, prefix="")
+app.include_router(dir_router, prefix="")
+app.include_router(securecrt_router, prefix="")
 
 @app.get("/healthz")
 async def health_check():
     return {"status": "ok"}
+

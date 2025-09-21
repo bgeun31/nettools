@@ -32,7 +32,7 @@ export function Sidebar({ activeMenu, onMenuSelect }: SidebarProps) {
           </div>
           <div>
             <h2 className="font-bold text-sidebar-foreground">NetTools</h2>
-            <p className="text-xs text-muted-foreground">v2.1.0</p>
+            <p className="text-xs text-muted-foreground">v1.0.0</p>
           </div>
         </div>
       </div>
