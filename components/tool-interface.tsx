@@ -46,6 +46,14 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   // distribute files (tool-4)
   const [distExcel, setDistExcel] = useState<File | null>(null)
   const [distFormat, setDistFormat] = useState<"txt" | "log">("txt")
+  // LLDP hostname (tool-5)
+  const [lldpFiles, setLldpFiles] = useState<FileList | null>(null)
+  const [lldpPattern, setLldpPattern] = useState("")
+  const [lldpIncludeDesc, setLldpIncludeDesc] = useState(false)
+  // LLDP OUI (tool-6)
+  const [lldpOuiFiles, setLldpOuiFiles] = useState<FileList | null>(null)
+  const [lldpOuiFilter, setLldpOuiFilter] = useState("")
+  const [lldpOuiAuto, setLldpOuiAuto] = useState(true)
   // results
   const [results, setResults] = useState<string | null>(null)
   const [files, setFiles] = useState<FileList | null>(null)
@@ -219,6 +227,76 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
           form.append("format", distFormat)
           const res = await fetch(`${API_BASE}/distribute/zip`, { method: "POST", body: form })
           if (!res.ok) throw new Error("ZIP 생성 실패")
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          setResults(url)
+        }
+      } catch (e: any) {
+        setResults(`에러: ${e.message}`)
+      } finally {
+        setIsRunning(false)
+      }
+      return
+    }
+
+    // LLDP (Hostname)
+    if (toolId === "tool-5") {
+      if (!lldpFiles || lldpFiles.length === 0) {
+        setResults("LLDP 로그 파일을 선택해주세요.")
+        return
+      }
+      setIsRunning(true)
+      setResults(null)
+      setTableJson(null)
+      try {
+        const form = new FormData()
+        Array.from(lldpFiles).forEach((f) => form.append("files", f))
+        form.append("pattern", lldpPattern)
+        form.append("include_description", String(lldpIncludeDesc))
+        if (mode === "json") {
+          const res = await fetch(`${API_BASE}/lldp/hostname/preview`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("미리보기 생성 실패")
+          const data = await res.json()
+          setTableJson(data)
+          setResults("미리보기 로드 완료")
+        } else {
+          const res = await fetch(`${API_BASE}/lldp/hostname/excel`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("엑셀 생성 실패")
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          setResults(url)
+        }
+      } catch (e: any) {
+        setResults(`에러: ${e.message}`)
+      } finally {
+        setIsRunning(false)
+      }
+      return
+    }
+
+    // LLDP (OUI)
+    if (toolId === "tool-6") {
+      if (!lldpOuiFiles || lldpOuiFiles.length === 0) {
+        setResults("LLDP 로그 파일을 선택해주세요.")
+        return
+      }
+      setIsRunning(true)
+      setResults(null)
+      setTableJson(null)
+      try {
+        const form = new FormData()
+        Array.from(lldpOuiFiles).forEach((f) => form.append("files", f))
+        form.append("ouis", lldpOuiFilter)
+        form.append("auto_detect", String(lldpOuiAuto))
+        if (mode === "json") {
+          const res = await fetch(`${API_BASE}/lldp/oui/preview`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("미리보기 생성 실패")
+          const data = await res.json()
+          setTableJson(data)
+          setResults("미리보기 로드 완료")
+        } else {
+          const res = await fetch(`${API_BASE}/lldp/oui/excel`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("엑셀 생성 실패")
           const blob = await res.blob()
           const url = URL.createObjectURL(blob)
           setResults(url)
@@ -422,7 +500,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             <div>
               <Label htmlFor="lldp-files">LLDP 로그 파일</Label>
               <div className="flex items-center gap-2">
-                <Input id="lldp-files" type="file" multiple accept=".log,.txt" />
+                <Input id="lldp-files" type="file" multiple accept=".log,.txt" onChange={(e) => setLldpFiles(e.target.files)} />
                 <Button variant="outline" size="icon">
                   <Upload className="w-4 h-4" />
                 </Button>
@@ -430,10 +508,10 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             </div>
             <div>
               <Label htmlFor="hostname-pattern">호스트네임 패턴</Label>
-              <Input id="hostname-pattern" placeholder="SW-*" />
+              <Input id="hostname-pattern" placeholder="SW-*" value={lldpPattern} onChange={(e) => setLldpPattern(e.target.value)} />
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox id="include-description" />
+              <Checkbox id="include-description" checked={lldpIncludeDesc} onCheckedChange={(v) => setLldpIncludeDesc(!!v)} />
               <Label htmlFor="include-description">포트 설명 포함</Label>
             </div>
           </div>
@@ -444,7 +522,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             <div>
               <Label htmlFor="lldp-oui-files">LLDP 로그 파일</Label>
               <div className="flex items-center gap-2">
-                <Input id="lldp-oui-files" type="file" multiple accept=".log,.txt" />
+                <Input id="lldp-oui-files" type="file" multiple accept=".log,.txt" onChange={(e) => setLldpOuiFiles(e.target.files)} />
                 <Button variant="outline" size="icon">
                   <Upload className="w-4 h-4" />
                 </Button>
@@ -452,10 +530,10 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             </div>
             <div>
               <Label htmlFor="oui-filter">OUI 필터</Label>
-              <Textarea id="oui-filter" placeholder="00:1B:21 (Cisco)&#10;00:04:96 (HP)" rows={3} />
+              <Textarea id="oui-filter" placeholder="00:1B:21 (Cisco)&#10;00:04:96 (HP)" rows={3} value={lldpOuiFilter} onChange={(e) => setLldpOuiFilter(e.target.value)} />
             </div>
             <div className="flex items-center space-x-2">
-              <Checkbox id="auto-detect" defaultChecked />
+              <Checkbox id="auto-detect" checked={lldpOuiAuto} onCheckedChange={(v) => setLldpOuiAuto(!!v)} />
               <Label htmlFor="auto-detect">자동 OUI 감지</Label>
             </div>
           </div>
@@ -601,7 +679,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   </div>
                   <a
                     href={results}
-                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : toolId === "tool-4" ? "distributed-logs.zip" : "hostname-serial.xlsx"}
+                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : toolId === "tool-4" ? "distributed-logs.zip" : toolId === "tool-5" ? "lldp-hostname.xlsx" : toolId === "tool-6" ? "lldp-oui.xlsx" : "hostname-serial.xlsx"}
                     className="inline-flex items-center justify-center w-full border rounded-md py-2"
                   >
                     <Download className="w-4 h-4 mr-2" />
