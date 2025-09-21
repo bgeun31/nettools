@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Search, Bell, User, Sun, RefreshCw, LogOut } from "lucide-react"
+import { Search, User, Sun, LogOut } from "lucide-react"
 
 interface HeaderProps {
   onLogout?: () => void
@@ -19,15 +19,6 @@ export function Header({ onLogout }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="icon">
-          <RefreshCw className="w-4 h-4" />
-        </Button>
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="w-4 h-4" />
-          <div className="absolute -top-1 -right-1 w-3 h-3 bg-destructive rounded-full flex items-center justify-center">
-            <span className="text-xs text-destructive-foreground font-bold">2</span>
-          </div>
-        </Button>
         <Button variant="ghost" size="icon">
           <Sun className="w-4 h-4" />
         </Button>
