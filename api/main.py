@@ -5,6 +5,7 @@ from .extract_model_serial_hostname import router as extract_router  # ← 점 �
 from .directory_listing import router as dir_router
 from .securecrt_hostname import router as securecrt_router
 from .securecrt_iprange import router as securecrt_ip_router
+from .log_merge import router as log_merge_router
 
 app = FastAPI(title="NetTools API")
 
@@ -20,6 +21,7 @@ app.include_router(extract_router, prefix="")
 app.include_router(dir_router, prefix="")
 app.include_router(securecrt_router, prefix="")
 app.include_router(securecrt_ip_router, prefix="")
+app.include_router(log_merge_router, prefix="")
 
 @app.get("/healthz")
 async def health_check():

@@ -40,6 +40,9 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   const [ipLabels, setIpLabels] = useState<File | null>(null)
   const [startIp, setStartIp] = useState("")
   const [endIp, setEndIp] = useState("")
+  // merge files (tool-3)
+  const [mergeFiles, setMergeFiles] = useState<FileList | null>(null)
+  const [mergeOutputName, setMergeOutputName] = useState("merged_logs.xlsx")
   // results
   const [results, setResults] = useState<string | null>(null)
   const [files, setFiles] = useState<FileList | null>(null)
@@ -153,6 +156,40 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
         } finally {
           setIsRunning(false)
         }
+      }
+      return
+    }
+
+    // Merge logs to Excel
+    if (toolId === "tool-3") {
+      if (!mergeFiles || mergeFiles.length === 0) {
+        setResults("병합할 파일을 선택해주세요.")
+        return
+      }
+      setIsRunning(true)
+      setResults(null)
+      setTableJson(null)
+      try {
+        const form = new FormData()
+        Array.from(mergeFiles).forEach((f) => form.append("files", f))
+        if (mode === "json") {
+          const res = await fetch(`${API_BASE}/merge/preview`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("미리보기 생성 실패")
+          const data = await res.json()
+          setTableJson(data)
+          setResults("미리보기 로드 완료")
+        } else {
+          form.append("output_name", mergeOutputName || "merged_logs.xlsx")
+          const res = await fetch(`${API_BASE}/merge/excel`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("엑셀 생성 실패")
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
+          setResults(url)
+        }
+      } catch (e: any) {
+        setResults(`에러: ${e.message}`)
+      } finally {
+        setIsRunning(false)
       }
       return
     }
@@ -304,7 +341,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             <div>
               <Label htmlFor="merge-files">병합할 파일 선택</Label>
               <div className="flex items-center gap-2">
-                <Input id="merge-files" type="file" multiple accept=".log,.txt" />
+                <Input id="merge-files" type="file" multiple accept=".log,.txt" onChange={(e) => setMergeFiles(e.target.files)} />
                 <Button variant="outline" size="icon">
                   <Upload className="w-4 h-4" />
                 </Button>
@@ -312,7 +349,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             </div>
             <div>
               <Label htmlFor="output-name">출력 파일명</Label>
-              <Input id="output-name" placeholder="merged_logs.xlsx" />
+              <Input id="output-name" placeholder="merged_logs.xlsx" value={mergeOutputName} onChange={(e) => setMergeOutputName(e.target.value)} />
             </div>
           </div>
         )
@@ -471,7 +508,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                 </Button>
                 <Button variant="outline" onClick={() => runExtract("excel")} disabled={isRunning}>
                   <FileText className="w-4 h-4 mr-2" />
-                  {toolId === "tool-1" ? "ZIP 다운로드" : toolId === "tool-0" ? "엑셀 다운로드" : "엑셀 다운로드"}
+                  {toolId === "tool-1" ? "ZIP 다운로드" : "엑셀 다운로드"}
                 </Button>
               </div>
             </CardContent>
@@ -527,7 +564,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   </div>
                   <a
                     href={results}
-                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : "hostname-serial.xlsx"}
+                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : "hostname-serial.xlsx"}
                     className="inline-flex items-center justify-center w-full border rounded-md py-2"
                   >
                     <Download className="w-4 h-4 mr-2" />
@@ -550,4 +587,3 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
     </div>
   )
 }
-
