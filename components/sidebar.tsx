@@ -6,14 +6,13 @@ import { Network, Terminal, FolderOpen, Database, Settings, Server, Home, Wifi, 
 
 const sidebarItems = [
   { id: "dashboard", icon: Home, label: "대시보드", active: true },
-  { id: "directory-listing", icon: FolderOpen, label: "디렉토리 Listing", active: false },
-  { id: "securecrt-ip", icon: Terminal, label: "SecureCRT (IP)", active: false },
-  { id: "model-extract", icon: Database, label: "모델/시리얼 추출", active: false },
-  { id: "securecrt-hostname", icon: Server, label: "SecureCRT (Hostname)", active: false },
-  { id: "log-distribute", icon: Split, label: "로그파일 분산", active: false },
-  { id: "log-merge", icon: Merge, label: "로그파일 병합", active: false },
-  { id: "lldp-hostname", icon: Network, label: "LLDP (Hostname)", active: false },
-  { id: "lldp-oui", icon: Wifi, label: "LLDP (OUI)", active: false },
+  { id: "tool-0", icon: FolderOpen, label: "디렉토리 Listing", active: false },
+  { id: "tool-1", icon: Terminal, label: "SecureCRT 세션 생성", active: false },
+  { id: "tool-2", icon: Database, label: "모델/시리얼/호스트네임 추출", active: false },
+  { id: "tool-3", icon: Merge, label: "로그파일 병합", active: false },
+  { id: "tool-4", icon: Split, label: "로그파일 분산", active: false },
+  { id: "tool-5", icon: Network, label: "LLDP (Hostname)", active: false },
+  { id: "tool-6", icon: Wifi, label: "LLDP (OUI)", active: false },
   { id: "settings", icon: Settings, label: "설정", active: false },
 ]
 

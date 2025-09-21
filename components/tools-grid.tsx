@@ -13,47 +13,39 @@ const tools = [
   {
     icon: FolderOpen,
     title: "디렉토리 Listing",
-    description: "지정된 폴더에서 .ini, .log, .txt 파일들의 이름을 추출하여 목록을 생성합니다.",
+    description: "지정된 폴더에서 .ini, .log, .txt 파일의 이름을 추출하여 목록을 생성합니다.",
     status: "ready",
     lastRun: "30분 전",
     color: "bg-blue-500",
   },
   {
     icon: Terminal,
-    title: "SecureCRT 세션 생성 (IP Range)",
-    description: "IP 범위와 라벨 파일을 기반으로 SecureCRT .ini 세션 파일들을 자동 생성합니다.",
+    title: "SecureCRT 세션 생성",
+    description: "IP 범위 또는 Hostname 목록으로 SecureCRT .ini 세션 파일을 생성합니다.",
     status: "ready",
     lastRun: "1시간 전",
-    color: "bg-green-500",
-  },
-  {
-    icon: Terminal,
-    title: "SecureCRT 세션 생성 (Hostname)",
-    description: "텍스트 파일의 호스트네임과 IP 정보를 기반으로 SecureCRT 세션 파일들을 생성합니다.",
-    status: "ready",
-    lastRun: "45분 전",
     color: "bg-emerald-500",
   },
   {
     icon: Server,
     title: "모델/시리얼/호스트네임 추출",
-    description: "네트워크 장비 로그에서 모델명, 시리얼 번호, 호스트네임 등을 추출하여 엑셀로 저장합니다.",
+    description: "네트워크 장비 로그에서 모델명, 시리얼번호, 호스트네임 등을 추출하여 엑셀로 정리합니다.",
     status: "ready",
     lastRun: "2시간 전",
     color: "bg-purple-500",
   },
   {
     icon: Merge,
-    title: "로그파일 병합",
-    description: "여러 개의 텍스트/로그 파일들을 하나의 엑셀 파일로 병합하여 통합 관리합니다.",
+    title: "로그 파일 병합",
+    description: "여러 개의 스위치 로그 파일을 하나의 엑셀 파일로 병합하여 통합 관리합니다.",
     status: "ready",
     lastRun: "1시간 전",
     color: "bg-orange-500",
   },
   {
     icon: Split,
-    title: "로그파일 분산",
-    description: "엑셀 파일의 각 시트를 개별 텍스트 파일로 분산하여 저장합니다.",
+    title: "로그 파일 분산",
+    description: "엑셀 파일을 단말/포트별 개별 텍스트 파일로 분산하여 배포합니다.",
     status: "ready",
     lastRun: "3시간 전",
     color: "bg-cyan-500",
@@ -85,7 +77,7 @@ const getStatusBadge = (status: string) => {
     case "ready":
       return <Badge variant="outline">준비됨</Badge>
     default:
-      return <Badge variant="outline">대기</Badge>
+      return <Badge variant="outline">알수없음</Badge>
   }
 }
 
@@ -141,3 +133,4 @@ export function ToolsGrid({ onToolSelect }: ToolsGridProps) {
     </div>
   )
 }
+
