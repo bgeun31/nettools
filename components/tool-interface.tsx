@@ -27,7 +27,8 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   const [includeImageSelected, setIncludeImageSelected] = useState(true)
   const [includeImageBooted, setIncludeImageBooted] = useState(true)
   // directory listing states (tool-0)
-  const [directoryPath, setDirectoryPath] = useState("")
+  const [directoryPath, setDirectoryPath] = useState("") // legacy (unused in zip mode)
+  const [dirZip, setDirZip] = useState<File | null>(null)
   const [dirIncludeIni, setDirIncludeIni] = useState(false)
   const [dirIncludeLog, setDirIncludeLog] = useState(true)
   const [dirIncludeTxt, setDirIncludeTxt] = useState(true)
@@ -63,10 +64,10 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000"
 
   const runExtract = async (mode: "json" | "excel") => {
-    // Directory Listing
+    // Directory Listing (ZIP upload)
     if (toolId === "tool-0") {
-      if (!directoryPath) {
-        setResults("디렉토리 경로를 입력해주세요.")
+      if (!dirZip) {
+        setResults("ZIP 파일을 업로드해주세요.")
         return
       }
       setIsRunning(true)
@@ -74,19 +75,19 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
       setTableJson(null)
       try {
         const form = new FormData()
-        form.append("directory", directoryPath)
+        form.append("zip", dirZip)
         form.append("include_ini", String(dirIncludeIni))
         form.append("include_log", String(dirIncludeLog))
         form.append("include_txt", String(dirIncludeTxt))
         if (mode === "json") {
-          const res = await fetch(`${API_BASE}/dir/list`, { method: "POST", body: form })
-          if (!res.ok) throw new Error("디렉토리 목록 조회 실패")
+          const res = await fetch(`${API_BASE}/dir/zip/list`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("목록 조회 실패")
           const data = await res.json()
           setTableJson(data)
           setResults("목록 로드 완료")
         } else {
-          const res = await fetch(`${API_BASE}/dir/list/excel`, { method: "POST", body: form })
-          if (!res.ok) throw new Error("디렉토리 목록 엑셀 생성 실패")
+          const res = await fetch(`${API_BASE}/dir/zip/list/excel`, { method: "POST", body: form })
+          if (!res.ok) throw new Error("엑셀 생성 실패")
           const blob = await res.blob()
           const url = URL.createObjectURL(blob)
           setResults(url)
@@ -354,8 +355,14 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="directory">디렉토리 경로</Label>
-              <Input id="directory" placeholder="C:\\logs" value={directoryPath} onChange={(e) => setDirectoryPath(e.target.value)} />
+              <Label htmlFor="dir-zip">디렉토리 ZIP 업로드</Label>
+              <div className="flex items-center gap-2">
+                <Input id="dir-zip" type="file" accept=".zip" onChange={(e) => setDirZip(e.target.files?.[0] ?? null)} />
+                <Button variant="outline" size="icon">
+                  <Upload className="w-4 h-4" />
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">디렉토리를 ZIP으로 압축하여 업로드하면 내부의 .ini/.log/.txt 파일 목록을 생성합니다.</p>
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox id="ini" checked={dirIncludeIni} onCheckedChange={(v) => setDirIncludeIni(!!v)} />
