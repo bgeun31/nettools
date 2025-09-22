@@ -67,7 +67,7 @@ async def extract_json(
         image_selected = extract_by_patterns(patterns["image_selected"], content)
         image_booted = extract_by_patterns(patterns["image_booted"], content)
         ip_addr = extract_by_patterns(patterns["ip"], content)
-        if ip_addr == "?�음":
+        if ip_addr == "없음":
             ip_addr = extract_by_patterns(patterns["filename"], f.filename)
 
         row = {
@@ -120,7 +120,7 @@ async def extract_excel(
         image_selected = extract_by_patterns(patterns["image_selected"], content)
         image_booted = extract_by_patterns(patterns["image_booted"], content)
         ip_addr = extract_by_patterns(patterns["ip"], content)
-        if ip_addr == "?�음":
+        if ip_addr == "없음":
             ip_addr = extract_by_patterns(patterns["filename"], f.filename)
         rows.append({
             "ip": ip_addr,
