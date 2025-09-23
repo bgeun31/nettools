@@ -397,7 +397,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      INI 파일 기본 위치: <code>C:\\Users\\사용자\\AppData\\Roaming\\VanDyke\\Config\\Sessions</code>
+                      INI 파일 기본 위치: <code>C:/Users/사용자/AppData/Roaming/VanDyke/Config/Sessions</code>
                     </p>
                   </div>
                   <div>
@@ -432,7 +432,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                       </Button>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
-                      템플릿 INI 기본 위치: <code>C:\\Users\\사용자\\AppData\\Roaming\\VanDyke\\Config\\Sessions</code>
+                      템플릿 INI 기본 위치: <code>C:/Users/사용자/AppData/Roaming/VanDyke/Config/Sessions</code>
                     </p>
                   </div>
                   <div>
