@@ -9,12 +9,13 @@ from .log_merge import router as log_merge_router
 from .log_distribute import router as log_distribute_router
 from .lldp_hostname import router as lldp_hostname_router
 from .lldp_oui import router as lldp_oui_router
+from .excel_compare import router as excel_compare_router
 
 app = FastAPI(title="NetTools API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://172.16.15.155:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -28,6 +29,7 @@ app.include_router(log_merge_router, prefix="")
 app.include_router(log_distribute_router, prefix="")
 app.include_router(lldp_hostname_router, prefix="")
 app.include_router(lldp_oui_router, prefix="")
+app.include_router(excel_compare_router, prefix="")
 
 @app.get("/healthz")
 async def health_check():
