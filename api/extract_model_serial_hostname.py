@@ -43,7 +43,11 @@ def extract_by_patterns(pattern_list, text: str):
     for p in pattern_list:
         m = p.search(text)
         if m:
-            return m.group(1).strip()
+            # 그룹이 있다면 group(1), 없다면 group(0)
+            try:
+                return m.group(1).strip()
+            except IndexError:
+                return m.group(0).strip()
     return "없음"
 
 @router.post("/extract/json")
