@@ -493,9 +493,9 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="log-folder">로그 파일 업로드</Label>
+              <Label htmlFor="log-folder">로그/ZIP 파일 업로드</Label>
               <div className="flex items-center gap-2">
-                {/* Directory selection: use non-typed props via any */}
+                {/* Unified upload: .log/.txt/.zip */}
                 <Input
                   id="log-folder"
                   type="file"
@@ -507,17 +507,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   <Upload className="w-4 h-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">선택한 폴더 내의 .log/.txt 파일만 자동 추출합니다.</p>
-            </div>
-            <div>
-              <Label htmlFor="log-zip">ZIP 업로드 (대체 옵션)</Label>
-              <div className="flex items-center gap-2">
-                <Input id="log-zip" type="file" accept=".zip" />
-                <Button variant="outline" size="icon">
-                  <Upload className="w-4 h-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">ZIP 내부의 하위 폴더까지 탐색하여 .log/.txt를 모두 처리합니다. ZIP이 선택되면 ZIP이 우선 사용됩니다.</p>
+              <p className="text-xs text-muted-foreground mt-1">업로드한 항목에서 .log/.txt만 자동 추출합니다. ZIP 내부는 하위 디렉토리까지 모두 탐색합니다.</p>
             </div>
           </div>
         )
