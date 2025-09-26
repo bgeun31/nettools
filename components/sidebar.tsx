@@ -12,6 +12,7 @@ const sidebarItems = [
   { id: "tool-3", icon: Merge, label: "로그파일 병합", active: false },
   { id: "tool-4", icon: Split, label: "로그파일 분산", active: false },
   { id: "tool-5", icon: Network, label: "LLDP 포트 라벨", active: false },
+  { id: "tool-6", icon: Server, label: "엑셀 행/열 비교", active: false },
   { id: "settings", icon: Settings, label: "설정", active: false },
 ]
 

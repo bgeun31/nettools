@@ -107,7 +107,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             </form>
 
             <div className="mt-6 p-4 bg-slate-700/50 rounded-lg">
-              <p className="text-sm text-slate-300 mb-2">계정 문의: 송봉근 사원</p>
+              <p className="text-sm text-slate-300 mb-2"></p>
             </div>
           </CardContent>
         </Card>
