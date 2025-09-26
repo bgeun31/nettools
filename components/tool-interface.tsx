@@ -49,8 +49,6 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   // distribute files (tool-4)
   const [distExcel, setDistExcel] = useState<File | null>(null)
   const [distFormat, setDistFormat] = useState<"txt" | "log">("txt")
-  // excel compare (tool-6)
-  const [compExcel, setCompExcel] = useState<File | null>(null)
   // LLDP hostname (tool-5)
   const [lldpFiles, setLldpFiles] = useState<FileList | null>(null)
   const [lldpPattern, setLldpPattern] = useState("")
@@ -245,40 +243,6 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
       }
       return
     }
-
-    // Excel compare (rows vs columns per sheet)
-    if (toolId === "tool-6") {
-      if (!compExcel) {
-        setResults("엑셀 파일을 업로드해 주세요.")
-        return
-      }
-      setIsRunning(true)
-      setResults(null)
-      setTableJson(null)
-      try {
-        const form = new FormData()
-        form.append("excel", compExcel)
-        if (mode === "json") {
-          const res = await fetch(`${API_BASE}/excel/compare/preview`, { method: "POST", body: form })
-          if (!res.ok) throw new Error("미리보기 생성 실패")
-          const data = await res.json()
-          setTableJson(data)
-          setResults("미리보기 로드 완료")
-        } else {
-          const res = await fetch(`${API_BASE}/excel/compare/excel`, { method: "POST", body: form })
-          if (!res.ok) throw new Error("엑셀 생성 실패")
-          const blob = await res.blob()
-          const url = URL.createObjectURL(blob)
-          setResults(url)
-        }
-      } catch (e: any) {
-        setResults(`에러: ${e.message}`)
-      } finally {
-        setIsRunning(false)
-      }
-      return
-    }
-
     // LLDP (combined tabs)
     if (toolId === "tool-5") {
       if (lldpTab === "hostname") {
@@ -653,21 +617,6 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             </Tabs>
           </div>
         )
-      case "tool-6":
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="comp-excel">엑셀 파일 업로드</Label>
-              <div className="flex items-center gap-2">
-                <Input id="comp-excel" type="file" accept=".xlsx,.xls" onChange={(e) => setCompExcel(e.target.files?.[0] ?? null)} />
-                <Button variant="outline" size="icon">
-                  <Upload className="w-4 h-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">각 시트에서 1행은 열 헤더, 1열은 행 헤더로 가정하여 대칭 여부를 검사합니다.</p>
-            </div>
-          </div>
-        )
       default:
         return <div>도구를 선택해주세요.</div>
     }
@@ -681,7 +630,6 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
       "로그 파일 병합",
       "로그 파일 분산",
       "LLDP 포트 라벨",
-      "엑셀 행/열 비교",
     ]
     const index = Number.parseInt(toolId.split("-")[1])
     return titles[index] || "도구"
@@ -809,7 +757,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   </div>
                   <a
                     href={results}
-                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : toolId === "tool-4" ? "distributed-logs.zip" : toolId === "tool-5" ? (lldpTab === "hostname" ? "lldp-hostname.xlsx" : "lldp-oui.xlsx") : toolId === "tool-6" ? "excel-compare.xlsx" : "hostname-serial.xlsx"}
+                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : toolId === "tool-4" ? "distributed-logs.zip" : toolId === "tool-5" ? (lldpTab === "hostname" ? "lldp-hostname.xlsx" : "lldp-oui.xlsx") : "hostname-serial.xlsx"}
                     className="inline-flex items-center justify-center w-full border rounded-md py-2"
                   >
                     <Download className="w-4 h-4 mr-2" />
@@ -832,3 +780,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
     </div>
   )
 }
+
+
+
+
