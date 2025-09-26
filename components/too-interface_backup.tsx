@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -26,7 +26,8 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   const [includeImage, setIncludeImage] = useState(true)
   const [includeImageSelected, setIncludeImageSelected] = useState(true)
   const [includeImageBooted, setIncludeImageBooted] = useState(true)
-  // unified upload handled via single input (tool-2)
+  // extract via zip (tool-2 optional)
+  const [extractZip, setExtractZip] = useState<File | null>(null)
   // directory listing states (tool-0)
   const [directoryPath, setDirectoryPath] = useState("") // legacy (unused in zip mode)
   const [dirZip, setDirZip] = useState<File | null>(null)
@@ -311,18 +312,18 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
     }
 
     // Default: 모델/시리얼/호스트네임 추출
-    if (!files || files.length === 0) {
+    if (!extractZip && (!files || files.length === 0)) {
       setResults("파일을 선택해주세요.")
       return
     }
     setIsRunning(true)
     setResults(null)
     setTableJson(null)
-    // If ZIP provided (legacy) – disabled; unified handler below
-    if (false) {
+    // If ZIP provided, use zip extraction endpoints and return early
+    if (extractZip) {
       try {
         const form = new FormData()
-        // unified: no direct zip handling here
+        form.append("zip", extractZip)
         form.append("include_ip", String(includeIp))
         form.append("include_model", String(includeModel))
         form.append("include_serial", String(includeSerial))
@@ -352,15 +353,13 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
     }
     try {
       const form = new FormData()
-      const all = Array.from(files)
+      const all = files ? Array.from(files) : []
       const selected = all.filter((f) => /\.(log|txt)$/i.test(f.name))
-      const zips = all.filter((f) => /\.(zip)$/i.test(f.name))
-      if (selected.length === 0 && zips.length === 0) {
+      if (selected.length === 0) {
         setResults("폴더 내 log/txt 파일이 없습니다.")
         return
       }
       selected.forEach((f) => form.append("files", f))
-      zips.forEach((f) => form.append("zips", f))
       form.append("include_ip", String(includeIp))
       form.append("include_model", String(includeModel))
       form.append("include_serial", String(includeSerial))
@@ -370,13 +369,13 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
       form.append("include_image_booted", String(includeImageBooted))
 
       if (mode === "json") {
-        const res = await fetch(`${API_BASE}/extract/any/json`, { method: "POST", body: form })
+        const res = await fetch(`${API_BASE}/extract/json`, { method: "POST", body: form })
         if (!res.ok) throw new Error("JSON 추출 실패")
         const data = await res.json()
         setTableJson(data)
         setResults("JSON 미리보기 로드 완료")
       } else {
-        const res = await fetch(`${API_BASE}/extract/any/excel`, { method: "POST", body: form })
+        const res = await fetch(`${API_BASE}/extract/excel`, { method: "POST", body: form })
         if (!res.ok) throw new Error("엑셀 추출 실패")
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
@@ -500,7 +499,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   id="log-folder"
                   type="file"
                   multiple
-                  accept=".log,.txt,.zip"
+                  {...({ webkitdirectory: true, directory: true } as any)}
                   onChange={(e) => setFiles(e.target.files)}
                 />
                 <Button variant="outline" size="icon">
@@ -512,7 +511,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             <div>
               <Label htmlFor="log-zip">ZIP 업로드 (대체 옵션)</Label>
               <div className="flex items-center gap-2">
-                <Input id="log-zip" type="file" accept=".zip" />
+                <Input id="log-zip" type="file" accept=".zip" onChange={(e) => setExtractZip(e.target.files?.[0] ?? null)} />
                 <Button variant="outline" size="icon">
                   <Upload className="w-4 h-4" />
                 </Button>
