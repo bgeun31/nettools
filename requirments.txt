@@ -3,3 +3,8 @@ uvicorn[standard]
 pandas
 openpyxl
 python-multipart
+netmiko
+paramiko
+tqdm
+python-dotenv==1.0.1
+tftpy
