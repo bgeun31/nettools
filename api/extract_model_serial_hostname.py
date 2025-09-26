@@ -38,8 +38,14 @@ patterns = {
         # FabricEngine: software releases list like '9.0.5.1.GA (Primary Release)'
         re.compile(r"(?im)^\s*(\d+(?:\.\d+){1,3})\.[A-Za-z].*\(Primary Release\)"),
     ],
-    "image_selected": [re.compile(r"Image\s*Selected\s*:\s*(\S+)")],
-    "image_booted": [re.compile(r"Image\s*Booted\s*:\s*(\S+)")],
+    "image_selected": [
+        re.compile(r"Image\s*Selected\s*:\s*(\S+)"),
+        re.compile(r"(?im)^\s*(\d+(?:\.\d+){1,3})\.[A-Za-z].*\(Primary Release\)"),
+    ],
+    "image_booted": [
+        re.compile(r"Image\s*Booted\s*:\s*(\S+)"),
+        re.compile(r"(?im)SysDescr\s*:\s.*?\((\d+(?:\.\d+){1,3})\)"),
+    ],
     # IP 추출: 로그 본문에서 우선 추출, 실패 시 파일명에서 추출
     "ip": [
         # EXOS 등에서 Mgmt/MGMT/Management가 포함된 라인에서 IP
