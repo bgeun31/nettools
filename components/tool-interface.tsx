@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -389,7 +389,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
     }
     try {
       const form = new FormData()
-      const all = Array.from(files)
+      const all = files ? Array.from(files) : []
       const selected = all.filter((f) => /\.(log|txt)$/i.test(f.name))
       if (selected.length === 0) {
         setResults("폴더 내 log/txt 파일이 없습니다.")
