@@ -1,28 +1,28 @@
-"use client"
+﻿"use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Sidebar } from "@/components/sidebar"
 import { Header } from "@/components/header"
 import { ToolsGrid } from "@/components/tools-grid"
 import { ToolInterface } from "@/components/tool-interface"
 import { LoginForm } from "@/components/login-form"
+import { onAuthStateChanged, signOut } from "firebase/auth"
+import { auth } from "@/lib/firebaseClient"
 
 export default function NetToolsPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [activeMenu, setActiveMenu] = useState("dashboard")
   const [selectedTool, setSelectedTool] = useState<string | null>(null)
 
-  const handleLogin = (username: string, password: string): boolean => {
-    // 간단한 인증 로직 (실제 환경에서는 서버 인증 사용)
-    if (username === "admin" && password === "gtni14!$") {
-      setIsAuthenticated(true)
-      return true
-    }
-    return false
-  }
+  useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user)
+    })
+    return () => unsub()
+  }, [])
 
-  const handleLogout = () => {
-    setIsAuthenticated(false)
+  const handleLogout = async () => {
+    await signOut(auth)
     setActiveMenu("dashboard")
     setSelectedTool(null)
   }
@@ -47,7 +47,7 @@ export default function NetToolsPage() {
   }
 
   if (!isAuthenticated) {
-    return <LoginForm onLogin={handleLogin} />
+    return <LoginForm />
   }
 
   return (
@@ -64,7 +64,6 @@ export default function NetToolsPage() {
                     <h1 className="text-3xl font-bold text-foreground">NetTools Dashboard</h1>
                     <p className="text-muted-foreground mt-1">네트워크 관리 도구 모음</p>
                   </div>
-                  
                 </div>
                 <ToolsGrid onToolSelect={handleToolSelect} />
               </>

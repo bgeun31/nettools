@@ -1,7 +1,7 @@
-# api/main.py
+﻿# api/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from .extract_model_serial_hostname import router as extract_router  # ← 점 하나
+from .extract_model_serial_hostname import router as extract_router  # ?????섎굹
 from .directory_listing import router as dir_router
 from .securecrt_hostname import router as securecrt_router
 from .securecrt_iprange import router as securecrt_ip_router
@@ -9,7 +9,6 @@ from .log_merge import router as log_merge_router
 from .log_distribute import router as log_distribute_router
 from .lldp_hostname import router as lldp_hostname_router
 from .lldp_oui import router as lldp_oui_router
-from .excel_compare import router as excel_compare_router
 
 app = FastAPI(title="NetTools API")
 
@@ -29,8 +28,8 @@ app.include_router(log_merge_router, prefix="")
 app.include_router(log_distribute_router, prefix="")
 app.include_router(lldp_hostname_router, prefix="")
 app.include_router(lldp_oui_router, prefix="")
-app.include_router(excel_compare_router, prefix="")
 
 @app.get("/healthz")
 async def health_check():
     return {"status": "ok"}
+

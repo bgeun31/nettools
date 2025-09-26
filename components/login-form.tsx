@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import type React from "react"
 
@@ -8,33 +8,48 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Shield, User, Lock } from "lucide-react"
+import { Shield, Mail, Lock } from "lucide-react"
+import { auth } from "@/lib/firebaseClient"
+import { signInWithEmailAndPassword } from "firebase/auth"
 
-interface LoginFormProps {
-  onLogin: (username: string, password: string) => boolean
-}
-
-export function LoginForm({ onLogin }: LoginFormProps) {
-  const [username, setUsername] = useState("")
+export function LoginForm() {
+  const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [error, setError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+
+  const codeToMessage = (code: string) => {
+    switch (code) {
+      case "auth/invalid-email":
+        return "유효하지 않은 이메일 형식입니다."
+      case "auth/user-disabled":
+        return "비활성화된 계정입니다. 관리자에게 문의하세요."
+      case "auth/user-not-found":
+      case "auth/wrong-password":
+      case "auth/invalid-credential":
+        return "이메일 또는 비밀번호가 올바르지 않습니다."
+      case "auth/too-many-requests":
+        return "요청이 너무 많습니다. 잠시 후 다시 시도하세요."
+      case "auth/network-request-failed":
+        return "네트워크 오류가 발생했습니다. 인터넷 연결을 확인하세요."
+      default:
+        return "로그인 중 오류가 발생했습니다."
+    }
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError("")
     setIsLoading(true)
-
-    // 간단한 로딩 시뮬레이션
-    await new Promise((resolve) => setTimeout(resolve, 1000))
-
-    const success = onLogin(username, password)
-
-    if (!success) {
-      setError("잘못된 사용자명 또는 비밀번호입니다.")
+    try {
+      await signInWithEmailAndPassword(auth, email.trim(), password)
+      // onAuthStateChanged에서 상위 컴포넌트가 인증 상태를 반영합니다.
+    } catch (err: any) {
+      const msg = codeToMessage(err?.code || "")
+      setError(msg)
+    } finally {
+      setIsLoading(false)
     }
-
-    setIsLoading(false)
   }
 
   return (
@@ -51,22 +66,22 @@ export function LoginForm({ onLogin }: LoginFormProps) {
         <Card className="bg-slate-800 border-slate-700">
           <CardHeader>
             <CardTitle className="text-white">로그인</CardTitle>
-            <CardDescription className="text-slate-400">계정 정보를 입력하여 접속하세요</CardDescription>
+            <CardDescription className="text-slate-400">계정 정보를 입력해 계속하세요</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="username" className="text-slate-200">
-                  사용자명
+                <Label htmlFor="email" className="text-slate-200">
+                  이메일
                 </Label>
                 <div className="relative">
-                  <User className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
                   <Input
-                    id="username"
-                    type="text"
-                    placeholder="사용자명을 입력하세요"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    id="email"
+                    type="email"
+                    placeholder="이메일을 입력하세요"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
                     className="pl-10 bg-slate-700 border-slate-600 text-white placeholder:text-slate-400"
                     required
                   />
@@ -107,7 +122,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
             </form>
 
             <div className="mt-6 p-4 bg-slate-700/50 rounded-lg">
-              <p className="text-sm text-slate-300 mb-2"></p>
+              <p className="text-sm text-slate-300 mb-2">계정 문의: 송봉근</p>
             </div>
           </CardContent>
         </Card>

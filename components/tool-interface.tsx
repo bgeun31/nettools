@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -26,8 +26,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   const [includeImage, setIncludeImage] = useState(true)
   const [includeImageSelected, setIncludeImageSelected] = useState(true)
   const [includeImageBooted, setIncludeImageBooted] = useState(true)
-  // extract via zip (tool-2 optional)
-  const [extractZip, setExtractZip] = useState<File | null>(null)
+  // unified upload handled via single input (tool-2)
   // directory listing states (tool-0)
   const [directoryPath, setDirectoryPath] = useState("") // legacy (unused in zip mode)
   const [dirZip, setDirZip] = useState<File | null>(null)
@@ -49,8 +48,6 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   // distribute files (tool-4)
   const [distExcel, setDistExcel] = useState<File | null>(null)
   const [distFormat, setDistFormat] = useState<"txt" | "log">("txt")
-  // excel compare (tool-6)
-  const [compExcel, setCompExcel] = useState<File | null>(null)
   // LLDP hostname (tool-5)
   const [lldpFiles, setLldpFiles] = useState<FileList | null>(null)
   const [lldpPattern, setLldpPattern] = useState("")
@@ -245,40 +242,6 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
       }
       return
     }
-
-    // Excel compare (rows vs columns per sheet)
-    if (toolId === "tool-6") {
-      if (!compExcel) {
-        setResults("엑셀 파일을 업로드해 주세요.")
-        return
-      }
-      setIsRunning(true)
-      setResults(null)
-      setTableJson(null)
-      try {
-        const form = new FormData()
-        form.append("excel", compExcel)
-        if (mode === "json") {
-          const res = await fetch(`${API_BASE}/excel/compare/preview`, { method: "POST", body: form })
-          if (!res.ok) throw new Error("미리보기 생성 실패")
-          const data = await res.json()
-          setTableJson(data)
-          setResults("미리보기 로드 완료")
-        } else {
-          const res = await fetch(`${API_BASE}/excel/compare/excel`, { method: "POST", body: form })
-          if (!res.ok) throw new Error("엑셀 생성 실패")
-          const blob = await res.blob()
-          const url = URL.createObjectURL(blob)
-          setResults(url)
-        }
-      } catch (e: any) {
-        setResults(`에러: ${e.message}`)
-      } finally {
-        setIsRunning(false)
-      }
-      return
-    }
-
     // LLDP (combined tabs)
     if (toolId === "tool-5") {
       if (lldpTab === "hostname") {
@@ -348,18 +311,18 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
     }
 
     // Default: 모델/시리얼/호스트네임 추출
-    if (!extractZip && (!files || files.length === 0)) {
+    if (!files || files.length === 0) {
       setResults("파일을 선택해주세요.")
       return
     }
     setIsRunning(true)
     setResults(null)
     setTableJson(null)
-    // If ZIP provided, use zip extraction endpoints and return early
-    if (extractZip) {
+    // If ZIP provided (legacy) – disabled; unified handler below
+    if (false) {
       try {
         const form = new FormData()
-        form.append("zip", extractZip)
+        // unified: no direct zip handling here
         form.append("include_ip", String(includeIp))
         form.append("include_model", String(includeModel))
         form.append("include_serial", String(includeSerial))
@@ -391,11 +354,13 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
       const form = new FormData()
       const all = Array.from(files)
       const selected = all.filter((f) => /\.(log|txt)$/i.test(f.name))
-      if (selected.length === 0) {
+      const zips = all.filter((f) => /\.(zip)$/i.test(f.name))
+      if (selected.length === 0 && zips.length === 0) {
         setResults("폴더 내 log/txt 파일이 없습니다.")
         return
       }
       selected.forEach((f) => form.append("files", f))
+      zips.forEach((f) => form.append("zips", f))
       form.append("include_ip", String(includeIp))
       form.append("include_model", String(includeModel))
       form.append("include_serial", String(includeSerial))
@@ -405,13 +370,13 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
       form.append("include_image_booted", String(includeImageBooted))
 
       if (mode === "json") {
-        const res = await fetch(`${API_BASE}/extract/json`, { method: "POST", body: form })
+        const res = await fetch(`${API_BASE}/extract/any/json`, { method: "POST", body: form })
         if (!res.ok) throw new Error("JSON 추출 실패")
         const data = await res.json()
         setTableJson(data)
         setResults("JSON 미리보기 로드 완료")
       } else {
-        const res = await fetch(`${API_BASE}/extract/excel`, { method: "POST", body: form })
+        const res = await fetch(`${API_BASE}/extract/any/excel`, { method: "POST", body: form })
         if (!res.ok) throw new Error("엑셀 추출 실패")
         const blob = await res.blob()
         const url = URL.createObjectURL(blob)
@@ -528,31 +493,21 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
         return (
           <div className="space-y-4">
             <div>
-              <Label htmlFor="log-folder">폴더 업로드</Label>
+              <Label htmlFor="log-folder">로그/ZIP 파일 업로드</Label>
               <div className="flex items-center gap-2">
-                {/* Directory selection: use non-typed props via any */}
+                {/* Unified upload: .log/.txt/.zip */}
                 <Input
                   id="log-folder"
                   type="file"
                   multiple
-                  {...({ webkitdirectory: true, directory: true } as any)}
+                  accept=".log,.txt,.zip"
                   onChange={(e) => setFiles(e.target.files)}
                 />
                 <Button variant="outline" size="icon">
                   <Upload className="w-4 h-4" />
                 </Button>
               </div>
-              <p className="text-xs text-muted-foreground mt-1">선택한 폴더 내의 .log/.txt 파일만 자동 추출합니다.</p>
-            </div>
-            <div>
-              <Label htmlFor="log-zip">ZIP 업로드 (대체 옵션)</Label>
-              <div className="flex items-center gap-2">
-                <Input id="log-zip" type="file" accept=".zip" onChange={(e) => setExtractZip(e.target.files?.[0] ?? null)} />
-                <Button variant="outline" size="icon">
-                  <Upload className="w-4 h-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">ZIP 내부의 하위 폴더까지 탐색하여 .log/.txt를 모두 처리합니다. ZIP이 선택되면 ZIP이 우선 사용됩니다.</p>
+              <p className="text-xs text-muted-foreground mt-1">업로드한 항목에서 .log/.txt만 자동 추출합니다. ZIP 내부는 하위 디렉토리까지 모두 탐색합니다.</p>
             </div>
           </div>
         )
@@ -653,21 +608,6 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             </Tabs>
           </div>
         )
-      case "tool-6":
-        return (
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="comp-excel">엑셀 파일 업로드</Label>
-              <div className="flex items-center gap-2">
-                <Input id="comp-excel" type="file" accept=".xlsx,.xls" onChange={(e) => setCompExcel(e.target.files?.[0] ?? null)} />
-                <Button variant="outline" size="icon">
-                  <Upload className="w-4 h-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">각 시트에서 1행은 열 헤더, 1열은 행 헤더로 가정하여 대칭 여부를 검사합니다.</p>
-            </div>
-          </div>
-        )
       default:
         return <div>도구를 선택해주세요.</div>
     }
@@ -681,7 +621,6 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
       "로그 파일 병합",
       "로그 파일 분산",
       "LLDP 포트 라벨",
-      "엑셀 행/열 비교",
     ]
     const index = Number.parseInt(toolId.split("-")[1])
     return titles[index] || "도구"
@@ -809,7 +748,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   </div>
                   <a
                     href={results}
-                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : toolId === "tool-4" ? "distributed-logs.zip" : toolId === "tool-5" ? (lldpTab === "hostname" ? "lldp-hostname.xlsx" : "lldp-oui.xlsx") : toolId === "tool-6" ? "excel-compare.xlsx" : "hostname-serial.xlsx"}
+                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : toolId === "tool-4" ? "distributed-logs.zip" : toolId === "tool-5" ? (lldpTab === "hostname" ? "lldp-hostname.xlsx" : "lldp-oui.xlsx") : "hostname-serial.xlsx"}
                     className="inline-flex items-center justify-center w-full border rounded-md py-2"
                   >
                     <Download className="w-4 h-4 mr-2" />
@@ -832,3 +771,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
     </div>
   )
 }
+
+
+
+
