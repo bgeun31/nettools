@@ -122,7 +122,7 @@ export function LoginForm() {
             </form>
 
             <div className="mt-6 p-4 bg-slate-700/50 rounded-lg">
-              <p className="text-sm text-slate-300 mb-2">Firebase Authentication(이메일/비밀번호)로 보호됩니다.</p>
+              <p className="text-sm text-slate-300 mb-2">계정 문의: 송봉근</p>
             </div>
           </CardContent>
         </Card>
