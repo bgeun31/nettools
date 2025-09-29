@@ -63,6 +63,12 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   const [files, setFiles] = useState<FileList | null>(null)
   const [tableJson, setTableJson] = useState<any[] | null>(null)
   const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000"
+  // Excel sheet diff (tool-6)
+  const [diffExcel, setDiffExcel] = useState<File | null>(null)
+  const [diffSheets, setDiffSheets] = useState<string[]>([])
+  const [diffSheetA, setDiffSheetA] = useState<string>("")
+  const [diffSheetB, setDiffSheetB] = useState<string>("")
+  const [diffUseHeader, setDiffUseHeader] = useState(true)
 
   const runExtract = async (mode: "json" | "excel") => {
     // Directory Listing (ZIP upload)
@@ -310,6 +316,94 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
       return
     }
 
+    // Excel sheet diff (client-side)
+    if (toolId === "tool-6") {
+      if (!diffExcel) {
+        setResults("엑셀 파일을 업로드해주세요.")
+        return
+      }
+      if (!diffSheetA || !diffSheetB) {
+        setResults("비교할 시트를 선택해주세요.")
+        return
+      }
+      setIsRunning(true)
+      setResults(null)
+      setTableJson(null)
+      try {
+        const XLSX = await import("xlsx")
+        const data = await diffExcel.arrayBuffer()
+        const wb = XLSX.read(data, { type: "array" })
+        const wsA = wb.Sheets[diffSheetA]
+        const wsB = wb.Sheets[diffSheetB]
+        if (!wsA || !wsB) throw new Error("선택한 시트를 찾을 수 없습니다.")
+        const aoaA: any[][] = XLSX.utils.sheet_to_json(wsA, { header: 1, blankrows: false }) as any
+        const aoaB: any[][] = XLSX.utils.sheet_to_json(wsB, { header: 1, blankrows: false }) as any
+
+        const startRow = diffUseHeader ? 1 : 0
+        const headersA: string[] = diffUseHeader ? (aoaA[0] as any[] || []).map((v) => String(v ?? "")) : []
+        const headersB: string[] = diffUseHeader ? (aoaB[0] as any[] || []).map((v) => String(v ?? "")) : []
+        const rowMax = Math.max(aoaA.length, aoaB.length)
+        const colMaxA = Math.max(0, ...aoaA.map((r) => (Array.isArray(r) ? r.length : 0)))
+        const colMaxB = Math.max(0, ...aoaB.map((r) => (Array.isArray(r) ? r.length : 0)))
+        const colMax = Math.max(colMaxA, colMaxB)
+
+        const toColLetter = (n: number) => {
+          let s = ""
+          let num = n + 1
+          while (num > 0) {
+            const mod = (num - 1) % 26
+            s = String.fromCharCode(65 + mod) + s
+            num = Math.floor((num - 1) / 26)
+          }
+          return s
+        }
+
+        const diffs: any[] = []
+        for (let r = startRow; r < rowMax; r++) {
+          for (let c = 0; c < colMax; c++) {
+            const vA = aoaA[r]?.[c]
+            const vB = aoaB[r]?.[c]
+            const a = vA === undefined || vA === null ? "" : String(vA)
+            const b = vB === undefined || vB === null ? "" : String(vB)
+            if (a === "" && b === "") continue
+            if (a !== b) {
+              const status = a !== "" && b !== "" ? "different" : a !== "" ? "only_in_A" : "only_in_B"
+              diffs.push({
+                sheetA: diffSheetA,
+                sheetB: diffSheetB,
+                row: r + 1,
+                column: toColLetter(c),
+                header: diffUseHeader ? (headersA[c] || headersB[c] || "") : "",
+                valueA: a,
+                valueB: b,
+                status,
+              })
+            }
+          }
+        }
+
+        if (mode === "json") {
+          setTableJson(diffs)
+          setResults("시트 비교 완료")
+        } else {
+          const headerRow = ["sheetA", "sheetB", "row", "column", "header", "valueA", "valueB", "status"]
+          const aoa = [headerRow, ...diffs.map((d) => [d.sheetA, d.sheetB, d.row, d.column, d.header, d.valueA, d.valueB, d.status])]
+          const outWb = XLSX.utils.book_new()
+          const ws = XLSX.utils.aoa_to_sheet(aoa)
+          XLSX.utils.book_append_sheet(outWb, ws, "Differences")
+          const wbout = XLSX.write(outWb, { type: "array", bookType: "xlsx" })
+          const blob = new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+          const url = URL.createObjectURL(blob)
+          setResults(url)
+        }
+      } catch (e: any) {
+        setResults(`오류: ${e.message}`)
+      } finally {
+        setIsRunning(false)
+      }
+      return
+    }
+
     // Default: 모델/시리얼/호스트네임 추출
     if (!files || files.length === 0) {
       setResults("파일을 선택해주세요.")
@@ -390,6 +484,81 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   }
 
   const renderToolInterface = () => {
+    if (toolId === "tool-6") {
+      return (
+        <div className="space-y-4">
+          <div>
+            <Label htmlFor="diff-excel">엑셀 파일 업로드</Label>
+            <div className="flex items-center gap-2">
+              <Input
+                id="diff-excel"
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={async (e) => {
+                  const f = e.target.files?.[0] ?? null
+                  setDiffExcel(f)
+                  setDiffSheets([])
+                  setDiffSheetA("")
+                  setDiffSheetB("")
+                  if (f) {
+                    try {
+                      const XLSX = await import("xlsx")
+                      const data = await f.arrayBuffer()
+                      const wb = XLSX.read(data, { type: "array" })
+                      const names = wb.SheetNames || []
+                      setDiffSheets(names)
+                      setDiffSheetA(names[0] || "")
+                      setDiffSheetB(names[1] || names[0] || "")
+                    } catch (err) {
+                      console.error(err)
+                    }
+                  }
+                }}
+              />
+              <Button variant="outline" size="icon">
+                <Upload className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="sheet-a">Sheet A</Label>
+              <Select value={diffSheetA} onValueChange={(v) => setDiffSheetA(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="시트를 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {diffSheets.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="sheet-b">Sheet B</Label>
+              <Select value={diffSheetB} onValueChange={(v) => setDiffSheetB(v)}>
+                <SelectTrigger>
+                  <SelectValue placeholder="시트를 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  {diffSheets.map((name) => (
+                    <SelectItem key={name} value={name}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox id="use-header" checked={diffUseHeader} onCheckedChange={(v) => setDiffUseHeader(!!v)} />
+            <Label htmlFor="use-header">첫 행을 헤더로 사용</Label>
+          </div>
+        </div>
+      )
+    }
     switch (toolId) {
       case "tool-0":
         return (
@@ -748,7 +917,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   </div>
                   <a
                     href={results}
-                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : toolId === "tool-4" ? "distributed-logs.zip" : toolId === "tool-5" ? (lldpTab === "hostname" ? "lldp-hostname.xlsx" : "lldp-oui.xlsx") : "hostname-serial.xlsx"}
+                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : toolId === "tool-4" ? "distributed-logs.zip" : toolId === "tool-5" ? (lldpTab === "hostname" ? "lldp-hostname.xlsx" : "lldp-oui.xlsx") : toolId === "tool-6" ? "excel-diff.xlsx" : "hostname-serial.xlsx"}
                     className="inline-flex items-center justify-center w-full border rounded-md py-2"
                   >
                     <Download className="w-4 h-4 mr-2" />

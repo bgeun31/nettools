@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Network, Terminal, FolderOpen, Server, Play, Settings, Merge, Split } from "lucide-react"
+import { Network, Terminal, FolderOpen, Server, Play, Settings, Merge, Split, Table } from "lucide-react"
 
 interface ToolsGridProps {
   onToolSelect: (toolId: string) => void
@@ -51,6 +51,13 @@ const tools = [
     description: "Hostname/OUI 기반의 LLDP 포트 라벨을 생성합니다.",
     status: "ready",
     color: "bg-indigo-500",
+  },
+  {
+    icon: Table,
+    title: "Excel 시트 비교",
+    description: "한 엑셀 파일 내 두 시트를 선택해 행/열 차이를 확인합니다.",
+    status: "ready",
+    color: "bg-teal-500",
   },
 ]
 
