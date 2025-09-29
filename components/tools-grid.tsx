@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Network, Terminal, FolderOpen, Server, Play, Settings, Merge, Split, Table } from "lucide-react"
+import { Network, Terminal, FolderOpen, Server, Play, Merge, Split, Table } from "lucide-react"
 
 interface ToolsGridProps {
   onToolSelect: (toolId: string) => void
@@ -95,9 +95,7 @@ export function ToolsGrid({ onToolSelect }: ToolsGridProps) {
                   <div className="flex items-center gap-2 mt-1">{getStatusBadge(tool.status)}</div>
                 </div>
               </div>
-              <Button variant="ghost" size="icon">
-                <Settings className="w-4 h-4" />
-              </Button>
+              
             </div>
           </CardHeader>
 
