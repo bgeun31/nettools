@@ -783,6 +783,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   }
 
   const getToolTitle = () => {
+    if (toolId === "tool-6") return "Excel 시트 비교"
     const titles = [
       "디렉토리 Listing",
       "SecureCRT 세션 생성",
