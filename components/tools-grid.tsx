@@ -47,8 +47,8 @@ const tools = [
   },
   {
     icon: Network,
-    title: "LLDP 포트 라벨",
-    description: "Hostname/OUI 기반의 LLDP 포트 라벨을 생성합니다.",
+    title: "LLDP 포트 추출",
+    description: "show lldp neighbors 결과에서 포트 정보를 추출합니다.",
     status: "ready",
     color: "bg-indigo-500",
   },

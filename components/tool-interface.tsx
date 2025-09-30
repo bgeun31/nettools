@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -48,16 +47,10 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   // distribute files (tool-4)
   const [distExcel, setDistExcel] = useState<File | null>(null)
   const [distFormat, setDistFormat] = useState<"txt" | "log">("txt")
-  // LLDP hostname (tool-5)
+  // LLDP 포트 추출 (tool-5)
   const [lldpFiles, setLldpFiles] = useState<FileList | null>(null)
   const [lldpPattern, setLldpPattern] = useState("")
   const [lldpIncludeDesc, setLldpIncludeDesc] = useState(false)
-  // LLDP OUI (tool-6)
-  const [lldpOuiFiles, setLldpOuiFiles] = useState<FileList | null>(null)
-  const [lldpOuiFilter, setLldpOuiFilter] = useState("")
-  const [lldpOuiAuto, setLldpOuiAuto] = useState(true)
-  // LLDP tabs (combined tool-5)
-  const [lldpTab, setLldpTab] = useState<"hostname" | "oui">("hostname")
   // results
   const [results, setResults] = useState<string | null>(null)
   const [files, setFiles] = useState<FileList | null>(null)
@@ -139,7 +132,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
         } finally {
           setIsRunning(false)
         }
-      } else {
+      {
         if (!ipTemplate || !ipLabels || !startIp || !endIp) {
           setResults("템플릿 INI, 라벨 TXT, 시작/종료 IP를 입력해주세요.")
           return
@@ -180,6 +173,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
       }
       return
     }
+  }
 
     // Merge logs to Excel
     if (toolId === "tool-3") {
@@ -250,7 +244,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
     }
     // LLDP (combined tabs)
     if (toolId === "tool-5") {
-      if (lldpTab === "hostname") {
+      {
         if (!lldpFiles || lldpFiles.length === 0) {
           setResults("LLDP 로그 파일을 선택해주세요.")
           return
@@ -285,41 +279,8 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
         } finally {
           setIsRunning(false)
         }
-      } else {
-        if (!lldpOuiFiles || lldpOuiFiles.length === 0) {
-          setResults("LLDP 로그 파일을 선택해주세요.")
-          return
-        }
-        setIsRunning(true)
-        setResults(null)
-        setTableJson(null)
-        try {
-          const form = new FormData()
-          const ouiAll = Array.from(lldpOuiFiles)
-          const ouiLogs = ouiAll.filter((f) => /\.(log|txt)$/i.test(f.name))
-          const ouiZips = ouiAll.filter((f) => /\.(zip)$/i.test(f.name))
-          ouiLogs.forEach((f) => form.append("files", f))
-          ouiZips.forEach((f) => form.append("zips", f))
-          form.append("ouis", lldpOuiFilter)
-          form.append("auto_detect", String(lldpOuiAuto))
-          if (mode === "json") {
-            const res = await fetch(`${API_BASE}/lldp/oui/preview`, { method: "POST", body: form })
-            if (!res.ok) throw new Error("미리보기 생성 실패")
-            const data = await res.json()
-            setTableJson(data)
-            setResults("미리보기 로드 완료")
-          } else {
-            const res = await fetch(`${API_BASE}/lldp/oui/excel`, { method: "POST", body: form })
-            if (!res.ok) throw new Error("엑셀 생성 실패")
-            const blob = await res.blob()
-            const url = URL.createObjectURL(blob)
-            setResults(url)
-          }
-        } catch (e: any) {
-          setResults(`에러: ${e.message}`)
-        } finally {
-          setIsRunning(false)
-        }
+      
+        // OUI 처리 제거
       }
       return
     }
@@ -735,54 +696,23 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
       case "tool-5":
         return (
           <div className="space-y-4">
-            <Tabs value={lldpTab} onValueChange={(v) => setLldpTab(v as any)}>
-              <TabsList>
-                <TabsTrigger value="hostname">Hostname</TabsTrigger>
-                <TabsTrigger value="oui">OUI</TabsTrigger>
-              </TabsList>
-              <TabsContent value="hostname">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="lldp-files">LLDP 로그 파일</Label>
-                    <div className="flex items-center gap-2">
-                      <Input id="lldp-files" type="file" multiple accept=".log,.txt,.zip" onChange={(e) => setLldpFiles(e.target.files)} />
-                      <Button variant="outline" size="icon">
-                        <Upload className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="hostname-pattern">호스트네임 패턴</Label>
-                    <Input id="hostname-pattern" placeholder="SW-*" value={lldpPattern} onChange={(e) => setLldpPattern(e.target.value)} />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="include-description" checked={lldpIncludeDesc} onCheckedChange={(v) => setLldpIncludeDesc(!!v)} />
-                    <Label htmlFor="include-description">포트 설명 포함</Label>
-                  </div>
-                </div>
-              </TabsContent>
-              <TabsContent value="oui">
-                <div className="space-y-4">
-                  <div>
-                    <Label htmlFor="lldp-oui-files">LLDP 로그 파일</Label>
-                    <div className="flex items-center gap-2">
-                      <Input id="lldp-oui-files" type="file" multiple accept=".log,.txt,.zip" onChange={(e) => setLldpOuiFiles(e.target.files)} />
-                      <Button variant="outline" size="icon">
-                        <Upload className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <div>
-                    <Label htmlFor="oui-filter">OUI 필터</Label>
-                    <Textarea id="oui-filter" placeholder="00:1B:21 (Cisco)&#10;00:04:96 (HP)" rows={3} value={lldpOuiFilter} onChange={(e) => setLldpOuiFilter(e.target.value)} />
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <Checkbox id="auto-detect" checked={lldpOuiAuto} onCheckedChange={(v) => setLldpOuiAuto(!!v)} />
-                    <Label htmlFor="auto-detect">자동 OUI 감지</Label>
-                  </div>
-                </div>
-              </TabsContent>
-            </Tabs>
+            <div>
+              <Label htmlFor="lldp-files">LLDP 로그 파일</Label>
+              <div className="flex items-center gap-2">
+                <Input id="lldp-files" type="file" multiple accept=".log,.txt,.zip" onChange={(e) => setLldpFiles(e.target.files)} />
+                <Button variant="outline" size="icon">
+                  <Upload className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <div>
+              <Label htmlFor="hostname-pattern">호스트네임 패턴</Label>
+              <Input id="hostname-pattern" placeholder="SW-*" value={lldpPattern} onChange={(e) => setLldpPattern(e.target.value)} />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="include-description" checked={lldpIncludeDesc} onCheckedChange={(v) => setLldpIncludeDesc(!!v)} />
+              <Label htmlFor="include-description">포트 설명 포함</Label>
+            </div>
           </div>
         )
       default:
@@ -798,7 +728,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
       "모델/시리얼/호스트네임 추출",
       "로그 파일 병합",
       "로그 파일 분산",
-      "LLDP 포트 라벨",
+      "LLDP 포트 추출",
     ]
     const index = Number.parseInt(toolId.split("-")[1])
     return titles[index] || "도구"
@@ -926,7 +856,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   </div>
                   <a
                     href={results}
-                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : toolId === "tool-4" ? "distributed-logs.zip" : toolId === "tool-5" ? (lldpTab === "hostname" ? "lldp-hostname.xlsx" : "lldp-oui.xlsx") : toolId === "tool-6" ? "excel-diff.xlsx" : "hostname-serial.xlsx"}
+                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : toolId === "tool-4" ? "distributed-logs.zip" : toolId === "tool-5" ? "lldp.xlsx" : toolId === "tool-6" ? "excel-diff.xlsx" : "hostname-serial.xlsx"}
                     className="inline-flex items-center justify-center w-full border rounded-md py-2"
                   >
                     <Download className="w-4 h-4 mr-2" />

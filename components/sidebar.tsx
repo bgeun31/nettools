@@ -11,7 +11,7 @@ const sidebarItems = [
   { id: "tool-2", icon: Database, label: "모델/시리얼/호스트네임 추출", active: false },
   { id: "tool-3", icon: Merge, label: "로그 파일 병합", active: false },
   { id: "tool-4", icon: Split, label: "로그 파일 분산", active: false },
-  { id: "tool-5", icon: Network, label: "LLDP 포트 라벨", active: false },
+  { id: "tool-5", icon: Network, label: "LLDP 포트 추출", active: false },
   { id: "tool-6", icon: Table, label: "Excel 시트 비교", active: false },
   { id: "settings", icon: Settings, label: "설정", active: false },
 ]
@@ -57,4 +57,3 @@ export function Sidebar({ activeMenu, onMenuSelect }: SidebarProps) {
     </div>
   )
 }
-

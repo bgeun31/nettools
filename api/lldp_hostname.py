@@ -14,6 +14,8 @@ router = APIRouter()
 SYSNAME_PATTERNS = [
     re.compile(r"SysName\s*:\s*(.+)"),
     re.compile(r'sysName\s+"(\S+)"'),
+    # e.g., "HOSTNAME # show lldp neighbors"
+    re.compile(r'^(\w[\w.\-]*)\s*#\s*show\s+lldp\s+neighbors', re.MULTILINE),
 ]
 
 # Month word detector to filter bogus NeighborName containing date-like tokens
@@ -82,8 +84,13 @@ def _parse_one(content: str, neighbor_patterns: List[re.Pattern], strip_prefix: 
 
     # LLDP table line format (flexible):
     # port   mac           port-id      ...  neighbor
+    # Optional timestamp prefix like: [YYYY/MM/DD HH:MM:SS]
     # capture: (port_num)(mac)(port_id_raw)(neighbor)
-    lldp_lines = re.findall(r'^\s*(\d+)\s+(\S+)\s+(\S+)\s+\S+\s+\S+\s+(\S+)', content, re.MULTILINE)
+    lldp_lines = re.findall(
+        r'^(?:\[[^\]]+\]\s*)?\s*(\d+)\s+(\S+)\s+(\S+)\s+\S+\s+\S+\s+(\S+)',
+        content,
+        re.MULTILINE,
+    )
     for port_num, mac, port_id_raw, neighbor_full in lldp_lines:
         if not _match_any(neighbor_full, neighbor_patterns):
             continue
@@ -219,6 +226,6 @@ async def lldp_hostname_excel(
     return StreamingResponse(
         stream,
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        headers={"Content-Disposition": "attachment; filename=lldp-hostname.xlsx"},
+        headers={"Content-Disposition": "attachment; filename=lldp.xlsx"},
     )
 
