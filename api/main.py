@@ -8,7 +8,6 @@ from .securecrt_iprange import router as securecrt_ip_router
 from .log_merge import router as log_merge_router
 from .log_distribute import router as log_distribute_router
 from .lldp_hostname import router as lldp_hostname_router
-from .lldp_oui import router as lldp_oui_router
 
 app = FastAPI(title="NetTools API")
 
@@ -27,7 +26,6 @@ app.include_router(securecrt_ip_router, prefix="")
 app.include_router(log_merge_router, prefix="")
 app.include_router(log_distribute_router, prefix="")
 app.include_router(lldp_hostname_router, prefix="")
-app.include_router(lldp_oui_router, prefix="")
 
 @app.get("/healthz")
 async def health_check():
