@@ -711,7 +711,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox id="include-description" checked={lldpIncludeDesc} onCheckedChange={(v) => setLldpIncludeDesc(!!v)} />
-              <Label htmlFor="include-description">포트 설명 포함</Label>
+              <Label htmlFor="include-description">패턴 일치만</Label>
             </div>
           </div>
         )

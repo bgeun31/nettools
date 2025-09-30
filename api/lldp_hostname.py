@@ -26,6 +26,16 @@ MONTH_WORD_RE = re.compile(
 )
 
 
+# IP extraction patterns (reused from model/serial/hostname extractor)
+IP_PATTERNS: list[re.Pattern] = [
+    re.compile(r"(?i)\b(?:mgmt|management)\b.*?((?:\d{1,3}\.){3}\d{1,3})"),
+    re.compile(r"(?i)\bip\s+address\s+((?:\d{1,3}\.){3}\d{1,3})"),
+    re.compile(r"\b((?:\d{1,3}\.){3}\d{1,3})\b\s*/\d{1,2}"),
+    re.compile(r"(?i)\b(?:ip(?:v4)?|addr(?:ess)?)\b\s*[:=]\s*((?:\d{1,3}\.){3}\d{1,3})"),
+]
+FILENAME_IP_RE = re.compile(r"^(\d{1,3}(?:\.\d{1,3}){3})_")
+
+
 def natural_sort_key(text: str):
     parts = re.split(r"(\d+)", text)
     key = []
@@ -70,7 +80,19 @@ def _match_any(text: str, patterns: List[re.Pattern]) -> bool:
     return any(p.search(text) for p in patterns)
 
 
-def _parse_one(content: str, neighbor_patterns: List[re.Pattern], strip_prefix: str) -> list[list[str]]:
+def _extract_ip(content: str, filename: str | None = None) -> str:
+    for pat in IP_PATTERNS:
+        m = pat.search(content)
+        if m:
+            return m.group(1).strip()
+    if filename:
+        m = FILENAME_IP_RE.search(filename)
+        if m:
+            return m.group(1).strip()
+    return ""
+
+
+def _parse_one(content: str, neighbor_patterns: List[re.Pattern], strip_prefix: str, filename: str | None = None) -> list[list[str]]:
     rows: list[list[str]] = []
     sysname_full = _extract_by_patterns(SYSNAME_PATTERNS, content) or ""
     if not sysname_full:
@@ -91,6 +113,7 @@ def _parse_one(content: str, neighbor_patterns: List[re.Pattern], strip_prefix: 
         content,
         re.MULTILINE,
     )
+    ip_addr = _extract_ip(content, filename)
     for port_num, mac, port_id_raw, neighbor_full in lldp_lines:
         if not _match_any(neighbor_full, neighbor_patterns):
             continue
@@ -106,7 +129,7 @@ def _parse_one(content: str, neighbor_patterns: List[re.Pattern], strip_prefix: 
 
         c_match = re.search(r'/(\d+)', port_id_raw)
         c = c_match.group(1) if c_match else port_id_raw
-        rows.append([sysname_out, f'P{port_num}', neighbor_name, f'P{c}', '-'])
+        rows.append([sysname_out, f'P{port_num}', neighbor_name, f'P{c}', ip_addr])
     return rows
 
 
@@ -118,7 +141,8 @@ async def lldp_hostname_preview(
     strip_prefix: str = Form(""),
     include_description: bool = Form(False),  # reserved, not used currently
 ):
-    neighbor_patterns = _compile_patterns(pattern)
+    # Checkbox repurposed: include_description = True -> filter by pattern, False -> include all
+    neighbor_patterns = _compile_patterns(pattern) if include_description else []
     all_rows: list[list[str]] = []
 
     # direct files (.log, .txt)
@@ -128,7 +152,7 @@ async def lldp_hostname_preview(
             if not (fname.endswith(".log") or fname.endswith(".txt")):
                 continue
             content = (await f.read()).decode("utf-8", errors="ignore")
-            rows = _parse_one(content, neighbor_patterns, strip_prefix)
+            rows = _parse_one(content, neighbor_patterns, strip_prefix, f.filename)
             if rows:
                 all_rows.extend(rows)
 
@@ -150,14 +174,14 @@ async def lldp_hostname_preview(
                     content = zf.read(name).decode("utf-8", errors="ignore")
                 except Exception:
                     continue
-                rows = _parse_one(content, neighbor_patterns, strip_prefix)
+                rows = _parse_one(content, neighbor_patterns, strip_prefix, os.path.basename(name))
                 if rows:
                     all_rows.extend(rows)
 
     if not all_rows:
         return []
 
-    df = pd.DataFrame(all_rows, columns=["sysName", "Port", "NeighborName", "NeighborPort", "End"])  
+    df = pd.DataFrame(all_rows, columns=["sysName", "Port", "NeighborName", "NeighborPort", "ip"])  
     df_sorted = df.sort_values(by=["sysName"], key=lambda s: s.map(natural_sort_key))
     return df_sorted.to_dict(orient="records")
 
@@ -170,7 +194,8 @@ async def lldp_hostname_excel(
     strip_prefix: str = Form("") ,
     include_description: bool = Form(False),  # reserved
 ):
-    neighbor_patterns = _compile_patterns(pattern)
+    # Checkbox repurposed: include_description = True -> filter by pattern, False -> include all
+    neighbor_patterns = _compile_patterns(pattern) if include_description else []
     all_rows: list[list[str]] = []
 
     if files:
@@ -179,7 +204,7 @@ async def lldp_hostname_excel(
             if not (fname.endswith(".log") or fname.endswith(".txt")):
                 continue
             content = (await f.read()).decode("utf-8", errors="ignore")
-            rows = _parse_one(content, neighbor_patterns, strip_prefix)
+            rows = _parse_one(content, neighbor_patterns, strip_prefix, f.filename)
             if rows:
                 all_rows.extend(rows)
 
@@ -200,11 +225,11 @@ async def lldp_hostname_excel(
                     content = zf.read(name).decode("utf-8", errors="ignore")
                 except Exception:
                     continue
-                rows = _parse_one(content, neighbor_patterns, strip_prefix)
+                rows = _parse_one(content, neighbor_patterns, strip_prefix, os.path.basename(name))
                 if rows:
                     all_rows.extend(rows)
 
-    df = pd.DataFrame(all_rows, columns=["sysName", "Port", "NeighborName", "NeighborPort", "End"]) if all_rows else pd.DataFrame(columns=["sysName", "Port", "NeighborName", "NeighborPort", "End"])
+    df = pd.DataFrame(all_rows, columns=["sysName", "Port", "NeighborName", "NeighborPort", "ip"]) if all_rows else pd.DataFrame(columns=["sysName", "Port", "NeighborName", "NeighborPort", "ip"])
     df_sorted = df.sort_values(by=["sysName"], key=lambda s: s.map(natural_sort_key)) if not df.empty else df
 
     # insert blank line between groups of sysName
@@ -217,7 +242,7 @@ async def lldp_hostname_excel(
         final_rows.append(list(row))
         prev = current
 
-    out_df = pd.DataFrame(final_rows, columns=["sysName", "Port", "NeighborName", "NeighborPort", "End"]) if final_rows else df_sorted
+    out_df = pd.DataFrame(final_rows, columns=["sysName", "Port", "NeighborName", "NeighborPort", "ip"]) if final_rows else df_sorted
 
     stream = io.BytesIO()
     with pd.ExcelWriter(stream, engine="openpyxl") as writer:
