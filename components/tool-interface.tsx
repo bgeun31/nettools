@@ -260,7 +260,11 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
         setTableJson(null)
         try {
           const form = new FormData()
-          Array.from(lldpFiles).forEach((f) => form.append("files", f))
+          const lldpAll = Array.from(lldpFiles)
+          const lldpLogs = lldpAll.filter((f) => /\.(log|txt)$/i.test(f.name))
+          const lldpZips = lldpAll.filter((f) => /\.(zip)$/i.test(f.name))
+          lldpLogs.forEach((f) => form.append("files", f))
+          lldpZips.forEach((f) => form.append("zips", f))
           form.append("pattern", lldpPattern)
           form.append("include_description", String(lldpIncludeDesc))
           if (mode === "json") {
@@ -291,7 +295,11 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
         setTableJson(null)
         try {
           const form = new FormData()
-          Array.from(lldpOuiFiles).forEach((f) => form.append("files", f))
+          const ouiAll = Array.from(lldpOuiFiles)
+          const ouiLogs = ouiAll.filter((f) => /\.(log|txt)$/i.test(f.name))
+          const ouiZips = ouiAll.filter((f) => /\.(zip)$/i.test(f.name))
+          ouiLogs.forEach((f) => form.append("files", f))
+          ouiZips.forEach((f) => form.append("zips", f))
           form.append("ouis", lldpOuiFilter)
           form.append("auto_detect", String(lldpOuiAuto))
           if (mode === "json") {
@@ -737,7 +745,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   <div>
                     <Label htmlFor="lldp-files">LLDP 로그 파일</Label>
                     <div className="flex items-center gap-2">
-                      <Input id="lldp-files" type="file" multiple accept=".log,.txt" onChange={(e) => setLldpFiles(e.target.files)} />
+                      <Input id="lldp-files" type="file" multiple accept=".log,.txt,.zip" onChange={(e) => setLldpFiles(e.target.files)} />
                       <Button variant="outline" size="icon">
                         <Upload className="w-4 h-4" />
                       </Button>
@@ -758,7 +766,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   <div>
                     <Label htmlFor="lldp-oui-files">LLDP 로그 파일</Label>
                     <div className="flex items-center gap-2">
-                      <Input id="lldp-oui-files" type="file" multiple accept=".log,.txt" onChange={(e) => setLldpOuiFiles(e.target.files)} />
+                      <Input id="lldp-oui-files" type="file" multiple accept=".log,.txt,.zip" onChange={(e) => setLldpOuiFiles(e.target.files)} />
                       <Button variant="outline" size="icon">
                         <Upload className="w-4 h-4" />
                       </Button>
