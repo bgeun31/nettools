@@ -73,10 +73,12 @@ def _compile_patterns(pattern_text: str | None) -> List[re.Pattern]:
     return patterns
 
 
-def _match_any(text: str, patterns: List[re.Pattern]) -> bool:
+def _match_any(text: str, patterns: List[re.Pattern], exact: bool = False) -> bool:
     if not patterns:
         # if no filter provided, accept all
         return True
+    if exact:
+        return any(p.fullmatch(text) for p in patterns)
     return any(p.search(text) for p in patterns)
 
 
@@ -98,7 +100,7 @@ def _normalize_name(name: str, strip_prefix: str) -> str:
     return name
 
 
-def _parse_one(content: str, neighbor_patterns: List[re.Pattern], strip_prefix: str, filename: str | None = None, host_ip_map: dict[str, str] | None = None) -> list[list[str]]:
+def _parse_one(content: str, neighbor_patterns: List[re.Pattern], strip_prefix: str, filename: str | None = None, host_ip_map: dict[str, str] | None = None, exact_match: bool = False) -> list[list[str]]:
     rows: list[list[str]] = []
     sysname_full = _extract_by_patterns(SYSNAME_PATTERNS, content) or ""
     if not sysname_full:
@@ -120,7 +122,7 @@ def _parse_one(content: str, neighbor_patterns: List[re.Pattern], strip_prefix: 
     # local device IP
     ip_addr = (host_ip_map or {}).get(sysname_out) or _extract_ip(content, filename)
     for port_num, mac, port_id_raw, neighbor_full in lldp_lines:
-        if not _match_any(neighbor_full, neighbor_patterns):
+        if not _match_any(neighbor_full, neighbor_patterns, exact=exact_match):
             continue
         neighbor_name = _normalize_name(neighbor_full, strip_prefix)
         # filter out unwanted neighbor names
@@ -146,7 +148,9 @@ async def lldp_hostname_preview(
     include_description: bool = Form(False),  # reserved, not used currently
 ):
     # Checkbox repurposed: include_description = True -> filter by pattern, False -> include all
-    neighbor_patterns = _compile_patterns(pattern) if include_description else []
+    # include_description True -> exact match only, False -> contains match
+    neighbor_patterns = _compile_patterns(pattern)
+    exact_match = bool(include_description)
     all_rows: list[list[str]] = []
 
     # collect all contents once for host-ip map and parsing reuse
@@ -192,7 +196,7 @@ async def lldp_hostname_preview(
 
     # now parse lldp
     for fname, content in collected:
-        rows = _parse_one(content, neighbor_patterns, strip_prefix, fname, host_ip_map)
+        rows = _parse_one(content, neighbor_patterns, strip_prefix, fname, host_ip_map, exact_match)
         if rows:
             all_rows.extend(rows)
 
@@ -213,7 +217,9 @@ async def lldp_hostname_excel(
     include_description: bool = Form(False),  # reserved
 ):
     # Checkbox repurposed: include_description = True -> filter by pattern, False -> include all
-    neighbor_patterns = _compile_patterns(pattern) if include_description else []
+    # include_description True -> exact match only, False -> contains match
+    neighbor_patterns = _compile_patterns(pattern)
+    exact_match = bool(include_description)
     all_rows: list[list[str]] = []
 
     # collect
@@ -258,7 +264,7 @@ async def lldp_hostname_excel(
             host_ip_map[sys_out] = ip_addr
 
     for fname, content in collected:
-        rows = _parse_one(content, neighbor_patterns, strip_prefix, fname, host_ip_map)
+        rows = _parse_one(content, neighbor_patterns, strip_prefix, fname, host_ip_map, exact_match)
         if rows:
             all_rows.extend(rows)
 
