@@ -92,7 +92,13 @@ def _extract_ip(content: str, filename: str | None = None) -> str:
     return ""
 
 
-def _parse_one(content: str, neighbor_patterns: List[re.Pattern], strip_prefix: str, filename: str | None = None) -> list[list[str]]:
+def _normalize_name(name: str, strip_prefix: str) -> str:
+    if strip_prefix and name.startswith(strip_prefix):
+        return name[len(strip_prefix):]
+    return name
+
+
+def _parse_one(content: str, neighbor_patterns: List[re.Pattern], strip_prefix: str, filename: str | None = None, host_ip_map: dict[str, str] | None = None) -> list[list[str]]:
     rows: list[list[str]] = []
     sysname_full = _extract_by_patterns(SYSNAME_PATTERNS, content) or ""
     if not sysname_full:
@@ -100,9 +106,7 @@ def _parse_one(content: str, neighbor_patterns: List[re.Pattern], strip_prefix: 
 
     # Do not filter by local sysName; pattern applies to neighbor names only
 
-    sysname_out = sysname_full
-    if strip_prefix and sysname_out.startswith(strip_prefix):
-        sysname_out = sysname_out[len(strip_prefix):]
+    sysname_out = _normalize_name(sysname_full, strip_prefix)
 
     # LLDP table line format (flexible):
     # port   mac           port-id      ...  neighbor
@@ -113,13 +117,12 @@ def _parse_one(content: str, neighbor_patterns: List[re.Pattern], strip_prefix: 
         content,
         re.MULTILINE,
     )
-    ip_addr = _extract_ip(content, filename)
+    # local device IP
+    ip_addr = (host_ip_map or {}).get(sysname_out) or _extract_ip(content, filename)
     for port_num, mac, port_id_raw, neighbor_full in lldp_lines:
         if not _match_any(neighbor_full, neighbor_patterns):
             continue
-        neighbor_name = neighbor_full
-        if strip_prefix and neighbor_name.startswith(strip_prefix):
-            neighbor_name = neighbor_name[len(strip_prefix):]
+        neighbor_name = _normalize_name(neighbor_full, strip_prefix)
         # filter out unwanted neighbor names
         low = neighbor_name.strip().lower()
         if low in {"not-advertised", "sep", "up"}:
@@ -129,7 +132,8 @@ def _parse_one(content: str, neighbor_patterns: List[re.Pattern], strip_prefix: 
 
         c_match = re.search(r'/(\d+)', port_id_raw)
         c = c_match.group(1) if c_match else port_id_raw
-        rows.append([sysname_out, f'P{port_num}', neighbor_name, f'P{c}', ip_addr])
+        neighbor_ip = (host_ip_map or {}).get(neighbor_name, "")
+        rows.append([sysname_out, f'P{port_num}', neighbor_name, f'P{c}', neighbor_ip, ip_addr])
     return rows
 
 
@@ -145,18 +149,17 @@ async def lldp_hostname_preview(
     neighbor_patterns = _compile_patterns(pattern) if include_description else []
     all_rows: list[list[str]] = []
 
-    # direct files (.log, .txt)
+    # collect all contents once for host-ip map and parsing reuse
+    collected: list[tuple[str, str]] = []  # (filename, content)
     if files:
         for f in files:
-            fname = (f.filename or "").lower()
-            if not (fname.endswith(".log") or fname.endswith(".txt")):
+            fname = f.filename or ""
+            lower = fname.lower()
+            if not (lower.endswith(".log") or lower.endswith(".txt")):
                 continue
             content = (await f.read()).decode("utf-8", errors="ignore")
-            rows = _parse_one(content, neighbor_patterns, strip_prefix, f.filename)
-            if rows:
-                all_rows.extend(rows)
+            collected.append((fname, content))
 
-    # zipped archives
     if zips:
         for z in zips:
             data = await z.read()
@@ -174,14 +177,29 @@ async def lldp_hostname_preview(
                     content = zf.read(name).decode("utf-8", errors="ignore")
                 except Exception:
                     continue
-                rows = _parse_one(content, neighbor_patterns, strip_prefix, os.path.basename(name))
-                if rows:
-                    all_rows.extend(rows)
+                collected.append((os.path.basename(name), content))
+
+    # build host->ip map from all collected contents
+    host_ip_map: dict[str, str] = {}
+    for fname, content in collected:
+        sysname = _extract_by_patterns(SYSNAME_PATTERNS, content)
+        if not sysname:
+            continue
+        sys_out = _normalize_name(sysname, strip_prefix)
+        ip_addr = _extract_ip(content, fname)
+        if ip_addr:
+            host_ip_map[sys_out] = ip_addr
+
+    # now parse lldp
+    for fname, content in collected:
+        rows = _parse_one(content, neighbor_patterns, strip_prefix, fname, host_ip_map)
+        if rows:
+            all_rows.extend(rows)
 
     if not all_rows:
         return []
 
-    df = pd.DataFrame(all_rows, columns=["sysName", "Port", "NeighborName", "NeighborPort", "ip"])  
+    df = pd.DataFrame(all_rows, columns=["sysName", "Port", "NeighborName", "NeighborPort", "NeighborIP", "ip"])  
     df_sorted = df.sort_values(by=["sysName"], key=lambda s: s.map(natural_sort_key))
     return df_sorted.to_dict(orient="records")
 
@@ -198,15 +216,16 @@ async def lldp_hostname_excel(
     neighbor_patterns = _compile_patterns(pattern) if include_description else []
     all_rows: list[list[str]] = []
 
+    # collect
+    collected: list[tuple[str, str]] = []
     if files:
         for f in files:
-            fname = (f.filename or "").lower()
-            if not (fname.endswith(".log") or fname.endswith(".txt")):
+            fname = f.filename or ""
+            lower = fname.lower()
+            if not (lower.endswith(".log") or lower.endswith(".txt")):
                 continue
             content = (await f.read()).decode("utf-8", errors="ignore")
-            rows = _parse_one(content, neighbor_patterns, strip_prefix, f.filename)
-            if rows:
-                all_rows.extend(rows)
+            collected.append((fname, content))
 
     if zips:
         for z in zips:
@@ -225,11 +244,25 @@ async def lldp_hostname_excel(
                     content = zf.read(name).decode("utf-8", errors="ignore")
                 except Exception:
                     continue
-                rows = _parse_one(content, neighbor_patterns, strip_prefix, os.path.basename(name))
-                if rows:
-                    all_rows.extend(rows)
+                collected.append((os.path.basename(name), content))
 
-    df = pd.DataFrame(all_rows, columns=["sysName", "Port", "NeighborName", "NeighborPort", "ip"]) if all_rows else pd.DataFrame(columns=["sysName", "Port", "NeighborName", "NeighborPort", "ip"])
+    # host->ip map
+    host_ip_map: dict[str, str] = {}
+    for fname, content in collected:
+        sysname = _extract_by_patterns(SYSNAME_PATTERNS, content)
+        if not sysname:
+            continue
+        sys_out = _normalize_name(sysname, strip_prefix)
+        ip_addr = _extract_ip(content, fname)
+        if ip_addr:
+            host_ip_map[sys_out] = ip_addr
+
+    for fname, content in collected:
+        rows = _parse_one(content, neighbor_patterns, strip_prefix, fname, host_ip_map)
+        if rows:
+            all_rows.extend(rows)
+
+    df = pd.DataFrame(all_rows, columns=["sysName", "Port", "NeighborName", "NeighborPort", "NeighborIP", "ip"]) if all_rows else pd.DataFrame(columns=["sysName", "Port", "NeighborName", "NeighborPort", "NeighborIP", "ip"])
     df_sorted = df.sort_values(by=["sysName"], key=lambda s: s.map(natural_sort_key)) if not df.empty else df
 
     # insert blank line between groups of sysName
@@ -238,11 +271,11 @@ async def lldp_hostname_excel(
     for row in df_sorted.itertuples(index=False):
         current = row.sysName
         if prev is not None and current != prev:
-            final_rows.append(["", "", "", "", ""]) 
+            final_rows.append(["", "", "", "", "", ""]) 
         final_rows.append(list(row))
         prev = current
 
-    out_df = pd.DataFrame(final_rows, columns=["sysName", "Port", "NeighborName", "NeighborPort", "ip"]) if final_rows else df_sorted
+    out_df = pd.DataFrame(final_rows, columns=["sysName", "Port", "NeighborName", "NeighborPort", "NeighborIP", "ip"]) if final_rows else df_sorted
 
     stream = io.BytesIO()
     with pd.ExcelWriter(stream, engine="openpyxl") as writer:
