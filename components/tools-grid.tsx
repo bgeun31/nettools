@@ -3,7 +3,7 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Network, Terminal, FolderOpen, Server, Play, Merge, Split, Table } from "lucide-react"
+import { Network, Terminal, FolderOpen, Server, Play, Merge, Split, Table, FileText } from "lucide-react"
 
 interface ToolsGridProps {
   onToolSelect: (toolId: string) => void
@@ -58,6 +58,13 @@ const tools = [
     description: "한 엑셀 파일 내 두 시트를 선택해 행/열 차이를 확인합니다.",
     status: "ready",
     color: "bg-teal-500",
+  },
+  {
+    icon: FileText,
+    title: "xsf 파일 생성",
+    description: "엑셀 각 행을 그대로 .xsf 파일로 생성합니다.",
+    status: "ready",
+    color: "bg-pink-500",
   },
 ]
 

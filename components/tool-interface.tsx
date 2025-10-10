@@ -62,6 +62,35 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
   const [diffSheetA, setDiffSheetA] = useState<string>("")
   const [diffSheetB, setDiffSheetB] = useState<string>("")
   const [diffUseHeader, setDiffUseHeader] = useState(true)
+  // XSF generate (tool-7)
+  const [xsfExcel, setXsfExcel] = useState<File | null>(null)
+  const [xsfSheet, setXsfSheet] = useState<string>("")
+  const [xsfFilename, setXsfFilename] = useState<string>("")
+
+  const runXsf = async () => {
+    if (!xsfExcel) {
+      setResults("엑셀 파일을 업로드해주세요.")
+      return
+    }
+    setIsRunning(true)
+    setResults(null)
+    setTableJson(null)
+    try {
+      const form = new FormData()
+      form.append("excel", xsfExcel)
+      if (xsfSheet) form.append("sheet", xsfSheet)
+      if (xsfFilename) form.append("filename", xsfFilename)
+      const res = await fetch(`${API_BASE}/xsf/generate`, { method: "POST", body: form })
+      if (!res.ok) throw new Error("xsf 생성 실패")
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      setResults(url)
+    } catch (e: any) {
+      setResults(`오류: ${e.message}`)
+    } finally {
+      setIsRunning(false)
+    }
+  }
 
   const runExtract = async (mode: "json" | "excel") => {
     // Directory Listing (ZIP upload)
@@ -627,6 +656,36 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
             </Tabs>
           </div>
         )
+      case "tool-7":
+        return (
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="xsf-excel">엑셀 파일 업로드</Label>
+              <div className="flex items-center gap-2">
+                <Input id="xsf-excel" type="file" accept=".xlsx,.xls" onChange={(e) => setXsfExcel(e.target.files?.[0] ?? null)} />
+                <Button variant="outline" size="icon">
+                  <Upload className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <Label htmlFor="xsf-sheet">시트명(선택)</Label>
+                <Input id="xsf-sheet" placeholder="미입력시 첫 시트" value={xsfSheet} onChange={(e) => setXsfSheet(e.target.value)} />
+              </div>
+              <div>
+                <Label htmlFor="xsf-filename">파일명(선택)</Label>
+                <Input id="xsf-filename" placeholder="output.xsf" value={xsfFilename} onChange={(e) => setXsfFilename(e.target.value)} />
+              </div>
+            </div>
+            <div className="flex gap-2 pt-2">
+              <Button className="flex-1" onClick={runXsf} disabled={isRunning}>
+                <Play className="w-4 h-4 mr-2" />
+                {isRunning ? "생성 중..." : "XSF 생성"}
+              </Button>
+            </div>
+          </div>
+        )
       case "tool-2":
         return (
           <div className="space-y-4">
@@ -856,7 +915,7 @@ export function ToolInterface({ toolId, onBack }: ToolInterfaceProps) {
                   </div>
                   <a
                     href={results}
-                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : toolId === "tool-4" ? "distributed-logs.zip" : toolId === "tool-5" ? "lldp.xlsx" : toolId === "tool-6" ? "excel-diff.xlsx" : "hostname-serial.xlsx"}
+                    download={toolId === "tool-1" ? "securecrt-sessions.zip" : toolId === "tool-0" ? "directory-listing.xlsx" : toolId === "tool-3" ? (mergeOutputName || "merged_logs.xlsx") : toolId === "tool-4" ? "distributed-logs.zip" : toolId === "tool-5" ? "lldp.xlsx" : toolId === "tool-6" ? "excel-diff.xlsx" : toolId === "tool-7" ? ((xsfFilename && (xsfFilename.toLowerCase().endsWith('.xsf') ? xsfFilename : `${xsfFilename}.xsf`)) || "output.xsf") : "hostname-serial.xlsx"}
                     className="inline-flex items-center justify-center w-full border rounded-md py-2"
                   >
                     <Download className="w-4 h-4 mr-2" />
